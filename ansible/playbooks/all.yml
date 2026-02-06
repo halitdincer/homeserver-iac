@@ -1,0 +1,39 @@
+---
+# Master playbook to configure all services
+
+- name: Configure all homeserver infrastructure
+  hosts: all
+  gather_facts: yes
+
+  tasks:
+    - name: Ping all hosts
+      ping:
+      ignore_errors: yes
+
+- import_playbook: nginx-proxy-manager.yml
+- import_playbook: immich.yml
+- import_playbook: home-assistant.yml
+
+- name: Summary
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Display deployment summary
+      debug:
+        msg:
+          - "==== Homeserver Infrastructure Deployed ===="
+          - ""
+          - "Services:"
+          - "  - Nginx Proxy Manager: http://192.168.2.10:81"
+          - "  - Immich: http://192.168.2.202:2283"
+          - "  - Home Assistant: http://192.168.2.206:8123"
+          - ""
+          - "External URLs:"
+          - "  - https://nginx.halitdincer.com"
+          - "  - https://photos.halitdincer.com"
+          - "  - https://ha.halitdincer.com"
+          - ""
+          - "Next steps:"
+          - "  1. Configure SSL certificates in NPM"
+          - "  2. Set up proxy hosts in NPM"
+          - "  3. Complete service-specific configuration"

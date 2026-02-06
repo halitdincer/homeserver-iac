@@ -1,0 +1,44 @@
+---
+# Home Assistant OS doesn't use traditional configuration management
+# This playbook is for reference and API-based management
+
+- name: Home Assistant OS Management
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    ha_url: "http://192.168.2.206:8123"
+    ha_token: "{{ lookup('env', 'HA_TOKEN') }}"  # Set via environment
+
+  tasks:
+    - name: Check Home Assistant status
+      uri:
+        url: "{{ ha_url }}/api/"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ ha_token }}"
+        validate_certs: no
+      register: ha_status
+      ignore_errors: yes
+      when: ha_token != ""
+
+    - name: Display Home Assistant info
+      debug:
+        msg:
+          - "Home Assistant OS is managed through its web UI"
+          - "URL: {{ ha_url }}"
+          - "External: https://ha.halitdincer.com"
+          - "Configuration is stored in /config on the VM"
+          - "Updates are managed through HA supervisor"
+      when: ha_token == ""
+
+    - name: Show HA status
+      debug:
+        var: ha_status
+      when: ha_token != "" and ha_status is succeeded
+
+# Note: For Home Assistant OS configuration, use:
+# 1. Web UI for manual changes
+# 2. configuration.yaml for declarative config
+# 3. Git integration for version control
+# 4. HA REST API for automation

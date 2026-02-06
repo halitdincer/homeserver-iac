@@ -1,0 +1,133 @@
+---
+- name: Configure Immich VM
+  hosts: immich
+  become: yes
+
+  vars:
+    immich_version: latest
+    immich_data_path: /opt/immich
+    immich_upload_path: /mnt/immich-data
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install required packages
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+          - curl
+          - git
+        state: present
+
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Create Immich data directory
+      file:
+        path: "{{ immich_data_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create upload directory
+      file:
+        path: "{{ immich_upload_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Deploy Immich docker-compose.yml
+      copy:
+        dest: "{{ immich_data_path }}/docker-compose.yml"
+        content: |
+          version: "3.8"
+
+          services:
+            immich-server:
+              container_name: immich_server
+              image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+              command: ['start.sh', 'immich']
+              volumes:
+                - ${UPLOAD_LOCATION}:/usr/src/app/upload
+                - /etc/localtime:/etc/localtime:ro
+              env_file:
+                - .env
+              ports:
+                - 2283:3001
+              depends_on:
+                - redis
+                - database
+              restart: always
+
+            immich-microservices:
+              container_name: immich_microservices
+              image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+              command: ['start.sh', 'microservices']
+              volumes:
+                - ${UPLOAD_LOCATION}:/usr/src/app/upload
+                - /etc/localtime:/etc/localtime:ro
+              env_file:
+                - .env
+              depends_on:
+                - redis
+                - database
+              restart: always
+
+            immich-machine-learning:
+              container_name: immich_machine_learning
+              image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+              volumes:
+                - model-cache:/cache
+              env_file:
+                - .env
+              restart: always
+
+            redis:
+              container_name: immich_redis
+              image: registry.hub.docker.com/library/redis:6.2-alpine@sha256:84882e87b54734154586e5f8abd4dce69fe7311315e2fc6d67c29614c8de2672
+              restart: always
+
+            database:
+              container_name: immich_postgres
+              image: registry.hub.docker.com/tensorchord/pgvecto-rs:pg14-v0.2.0@sha256:90724186f0a3517cf6914295b5ab410db9ce23190a2d9d0b9dd6463e3fa298f0
+              env_file:
+                - .env
+              environment:
+                POSTGRES_PASSWORD: ${DB_PASSWORD}
+                POSTGRES_USER: ${DB_USERNAME}
+                POSTGRES_DB: ${DB_DATABASE_NAME}
+              volumes:
+                - pgdata:/var/lib/postgresql/data
+              restart: always
+
+          volumes:
+            pgdata:
+            model-cache:
+
+    - name: Create Immich .env file
+      copy:
+        dest: "{{ immich_data_path }}/.env"
+        content: |
+          UPLOAD_LOCATION={{ immich_upload_path }}
+          IMMICH_VERSION=release
+          DB_HOSTNAME=database
+          DB_USERNAME=postgres
+          DB_PASSWORD=postgres
+          DB_DATABASE_NAME=immich
+          REDIS_HOSTNAME=redis
+        mode: '0600'
+
+    - name: Start Immich containers
+      community.docker.docker_compose:
+        project_src: "{{ immich_data_path }}"
+        state: present
+      register: output
+
+    - name: Show Immich deployment status
+      debug:
+        msg: "Immich is running at http://{{ ansible_host }}:2283"

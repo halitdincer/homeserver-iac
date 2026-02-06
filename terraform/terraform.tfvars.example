@@ -1,0 +1,22 @@
+# Copy this file to terraform.tfvars and fill in your values
+# DO NOT commit terraform.tfvars to git!
+
+# Proxmox API credentials
+proxmox_api_url          = "https://192.168.2.50:8006/api2/json"
+proxmox_token_id         = "root@pam!terraform"
+proxmox_token_secret     = "your-secret-token-here"
+
+# Proxmox node
+proxmox_node = "pve1"
+
+# Network settings
+network_gateway = "192.168.2.1"
+network_bridge  = "vmbr0"
+dns_servers     = "192.168.2.1 8.8.8.8"
+
+# SSH public key for VM access (optional)
+ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EA... your-key-here"
+
+# Storage
+storage_pool = "local-lvm"
+iso_storage  = "local"
