@@ -12,7 +12,7 @@ resource "proxmox_virtual_environment_vm" "immich" {
   }
 
   memory {
-    dedicated = 16384  # 16GB
+    dedicated = 17408  # 17GB (added 1GB for testing)
   }
 
   bios = "ovmf"
