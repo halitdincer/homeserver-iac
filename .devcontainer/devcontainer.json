@@ -1,0 +1,66 @@
+{
+  "name": "Homeserver IaC",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+
+  "features": {
+    "ghcr.io/devcontainers/features/terraform:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11"
+    },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "postCreateCommand": "pip install ansible && git secrets --install || true",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "hashicorp.terraform",
+        "redhat.ansible",
+        "github.vscode-github-actions"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "files.associations": {
+          "*.tf": "terraform",
+          "*.tfvars": "terraform"
+        }
+      }
+    },
+    "codespaces": {
+      "openFiles": [
+        "README.md",
+        "docs/PORTABILITY.md"
+      ]
+    }
+  },
+
+  "forwardPorts": [],
+
+  "secrets": {
+    "PROXMOX_PASSWORD": {
+      "description": "Proxmox root password",
+      "documentationUrl": "https://docs.github.com/codespaces/managing-your-codespaces/managing-secrets-for-your-codespaces"
+    },
+    "PROXMOX_API_URL": {
+      "description": "Proxmox API URL (https://192.168.2.50:8006/api2/json)"
+    }
+  },
+
+  "containerEnv": {
+    "TF_VAR_proxmox_user": "root@pam",
+    "TF_VAR_proxmox_api_url": "${localEnv:PROXMOX_API_URL}",
+    "TF_VAR_proxmox_password": "${localEnv:PROXMOX_PASSWORD}",
+    "TF_VAR_proxmox_node": "pve1",
+    "TF_VAR_network_gateway": "192.168.2.1",
+    "TF_VAR_network_bridge": "vmbr0",
+    "TF_VAR_dns_servers": "192.168.2.1 8.8.8.8",
+    "TF_VAR_storage_pool": "local-lvm",
+    "TF_VAR_iso_storage": "local"
+  },
+
+  "remoteUser": "vscode"
+}

@@ -1,2 +1,5 @@
 SECURITY_IMPLEMENTATION.md:.*
 docs/SECRETS_BEST_PRACTICES.md:.*
+PORTABLE_SETUP.md:.*
+quick-setup.sh:.*
+.devcontainer/.*
