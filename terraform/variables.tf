@@ -77,3 +77,25 @@ variable "iso_storage" {
   type        = string
   default     = "local"
 }
+
+# Namecheap DNS
+variable "namecheap_user_name" {
+  description = "Namecheap account username"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "namecheap_api_user" {
+  description = "Namecheap API user (usually same as username)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "namecheap_api_key" {
+  description = "Namecheap API key"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

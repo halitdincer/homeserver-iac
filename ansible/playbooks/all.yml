@@ -10,7 +10,6 @@
       ping:
       ignore_errors: yes
 
-- import_playbook: nginx-proxy-manager.yml
 - import_playbook: immich.yml
 - import_playbook: home-assistant.yml
 - import_playbook: backup.yml
@@ -25,16 +24,13 @@
           - "==== Homeserver Infrastructure Deployed ===="
           - ""
           - "Services:"
-          - "  - Nginx Proxy Manager: http://192.168.2.10:81"
           - "  - Immich: http://192.168.2.202:2283"
           - "  - Home Assistant: http://192.168.2.206:8123"
+          - "  - K3s (nginx ingress): http://192.168.2.216"
           - ""
-          - "External URLs:"
-          - "  - https://nginx.halitdincer.com"
+          - "External URLs (via K3s ingress):"
           - "  - https://photos.halitdincer.com"
           - "  - https://ha.halitdincer.com"
+          - "  - https://argocd.halitdincer.com"
           - ""
-          - "Next steps:"
-          - "  1. Configure SSL certificates in NPM"
-          - "  2. Set up proxy hosts in NPM"
-          - "  3. Complete service-specific configuration"
+          - "Routing: Internet -> Router (80/443) -> K3s ingress (192.168.2.216)"
