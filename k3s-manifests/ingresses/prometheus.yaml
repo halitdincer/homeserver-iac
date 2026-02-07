@@ -1,0 +1,28 @@
+---
+# Prometheus - Metrics Collection
+# Domain: prometheus.halitdincer.com
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prometheus
+  namespace: monitoring
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - prometheus.halitdincer.com
+    secretName: prometheus-tls
+  rules:
+  - host: prometheus.halitdincer.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: prometheus
+            port:
+              number: 9090
