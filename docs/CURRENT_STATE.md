@@ -39,7 +39,7 @@
 - **Boot**: UEFI (OVMF), Q35 machine type
 - **Storage**: SCSI (virtio-scsi-single), iothread enabled
 - **Network**: virtio, bridge vmbr0
-- **Credentials**: dincer / AbTe0fzg
+- **Credentials**: dincer / <REDACTED>
 - **Services**:
   - Nginx Proxy Manager (Docker) on port 81 (admin)
   - Proxies ports 80, 443 to services

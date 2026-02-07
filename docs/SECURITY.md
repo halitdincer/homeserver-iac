@@ -25,7 +25,7 @@
 ### 1. Proxmox Credentials
 **Location:** `terraform/terraform.tfvars`
 ```hcl
-proxmox_password = "AbTe0fzg"  # ⚠️ NEVER commit this file!
+proxmox_password = "<REDACTED>"  # ⚠️ NEVER commit this file!
 ```
 
 **Protection:**
@@ -36,7 +36,7 @@ proxmox_password = "AbTe0fzg"  # ⚠️ NEVER commit this file!
 ### 2. Nginx VM Password
 **Location:** `~/.claude/CLAUDE.md` (global Claude config)
 ```
-SSH to Nginx VM: ssh dincer@192.168.2.10 (password: AbTe0fzg)
+SSH to Nginx VM: ssh dincer@192.168.2.10 (password: <REDACTED>)
 ```
 
 **Protection:**
@@ -81,7 +81,7 @@ nginx:
 
 **Current:**
 ```hcl
-proxmox_password = "AbTe0fzg"
+proxmox_password = "<REDACTED>"
 ```
 
 **Risk:** If file is accidentally committed or machine is compromised
@@ -121,13 +121,13 @@ proxmox_password = "AbTe0fzg"
 **Instead of:**
 ```hcl
 # terraform.tfvars
-proxmox_password = "AbTe0fzg"
+proxmox_password = "<REDACTED>"
 ```
 
 **Use:**
 ```bash
 # In your shell
-export TF_VAR_proxmox_password="AbTe0fzg"
+export TF_VAR_proxmox_password="<REDACTED>"
 
 # terraform.tfvars becomes optional
 # Password only in memory, not on disk
@@ -181,7 +181,7 @@ vars_files:
 
 ### 4. SSH Keys Instead of Passwords
 
-**Current:** `ssh dincer@192.168.2.10` (password: AbTe0fzg)
+**Current:** `ssh dincer@192.168.2.10` (password: <REDACTED>)
 
 **Better:**
 ```bash
@@ -202,7 +202,7 @@ ssh-copy-id dincer@192.168.2.10
 cd ~/homeserver-iac
 
 # Check what's in git
-git ls-files | xargs grep -l "AbTe0fzg" && echo "⚠️ PASSWORD FOUND!" || echo "✅ Clean"
+git ls-files | xargs grep -l "<REDACTED>" && echo "⚠️ PASSWORD FOUND!" || echo "✅ Clean"
 
 # Check for any .tfvars in git
 git ls-files | grep "\.tfvars$" && echo "⚠️ TFVARS IN GIT!" || echo "✅ Clean"
