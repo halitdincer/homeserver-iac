@@ -1,0 +1,111 @@
+---
+- name: Install and Configure Tailscale
+  hosts: "{{ target_hosts | default('all') }}"
+  become: yes
+  vars:
+    tailscale_up: true
+    tailscale_args: "--accept-routes"
+
+  tasks:
+    - name: Check if running on Debian/Ubuntu
+      ansible.builtin.set_fact:
+        is_debian: "{{ ansible_os_family == 'Debian' }}"
+
+    - name: Add Tailscale repository key (Debian/Ubuntu)
+      ansible.builtin.apt_key:
+        url: https://pkgs.tailscale.com/stable/debian/bullseye.noarmor.gpg
+        keyring: /usr/share/keyrings/tailscale-archive-keyring.gpg
+        state: present
+      when: is_debian
+
+    - name: Add Tailscale repository (Debian/Ubuntu)
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/debian bullseye main"
+        filename: tailscale
+        state: present
+      when: is_debian
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+      when: is_debian
+
+    - name: Install Tailscale
+      ansible.builtin.apt:
+        name: tailscale
+        state: present
+      when: is_debian
+
+    - name: Check if Tailscale is already authenticated
+      ansible.builtin.command: tailscale status
+      register: tailscale_status
+      failed_when: false
+      changed_when: false
+
+    - name: Display Tailscale status
+      ansible.builtin.debug:
+        msg: "{{ tailscale_status.stdout_lines }}"
+      when: tailscale_status.rc == 0
+
+    - name: Enable and start Tailscale service
+      ansible.builtin.systemd:
+        name: tailscaled
+        enabled: yes
+        state: started
+
+    - name: Get Tailscale authentication URL if not authenticated
+      ansible.builtin.command: "tailscale up {{ tailscale_args }}"
+      register: tailscale_up_output
+      when:
+        - tailscale_up | bool
+        - tailscale_status.rc != 0 or 'Logged out' in tailscale_status.stdout
+      failed_when: false
+      changed_when: "'To authenticate, visit:' in tailscale_up_output.stderr or 'Success' in tailscale_up_output.stderr"
+
+    - name: Display authentication URL
+      ansible.builtin.debug:
+        msg: "{{ tailscale_up_output.stderr_lines }}"
+      when:
+        - tailscale_up_output is defined
+        - tailscale_up_output.stderr_lines is defined
+        - tailscale_up_output.stderr_lines | length > 0
+
+    - name: Get Tailscale IP address
+      ansible.builtin.command: tailscale ip -4
+      register: tailscale_ip
+      changed_when: false
+      failed_when: false
+
+    - name: Display Tailscale IP
+      ansible.builtin.debug:
+        msg: "Tailscale IP for {{ inventory_hostname }}: {{ tailscale_ip.stdout }}"
+      when: tailscale_ip.rc == 0 and tailscale_ip.stdout != ""
+
+    - name: Save Tailscale IP to local facts
+      ansible.builtin.set_fact:
+        tailscale_ip_address: "{{ tailscale_ip.stdout }}"
+      when: tailscale_ip.rc == 0 and tailscale_ip.stdout != ""
+
+- name: Summary
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Display installation summary
+      ansible.builtin.debug:
+        msg: |
+          ====================================
+          Tailscale Installation Complete!
+          ====================================
+
+          Next steps:
+          1. Authenticate each host by visiting the URLs shown above
+          2. Check the Tailscale admin console: https://login.tailscale.com/admin/machines
+          3. Note down the Tailscale IPs for each host
+          4. Update your Terraform config to use Tailscale IPs for remote access
+
+          To test connectivity:
+          - ping <tailscale-ip>
+          - ssh root@<tailscale-ip>
+
+          To check Tailscale status on any host:
+          - ansible <host> -i inventory/hosts.yml -m command -a "tailscale status"

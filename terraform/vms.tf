@@ -61,64 +61,6 @@ resource "proxmox_virtual_environment_vm" "immich" {
   }
 }
 
-# VM 102: Nginx Proxy Manager
-resource "proxmox_virtual_environment_vm" "nginx" {
-  name        = "nginx"
-  description = "Nginx Proxy Manager - Reverse proxy for all services"
-  node_name   = var.proxmox_node
-  vm_id       = 102
-  on_boot     = true
-
-  cpu {
-    cores = 2
-    type  = "host"
-  }
-
-  memory {
-    dedicated = 8192  # 8GB
-  }
-
-  bios = "ovmf"
-  machine = "q35"
-  scsi_hardware = "virtio-scsi-single"
-
-  agent {
-    enabled = true
-  }
-
-  network_device {
-    bridge = var.network_bridge
-    model  = "virtio"
-  }
-
-  disk {
-    datastore_id = var.storage_pool
-    interface    = "scsi0"
-    iothread     = true
-    size         = 64
-    file_format  = "raw"
-  }
-
-  efi_disk {
-    datastore_id = var.storage_pool
-    type         = "4m"
-  }
-
-  serial_device {}
-
-  operating_system {
-    type = "l26"
-  }
-
-  lifecycle {
-    ignore_changes = [
-      network_device,
-      disk,
-      started,
-    ]
-  }
-}
-
 # VM 103: Home Assistant OS
 resource "proxmox_virtual_environment_vm" "home_assistant" {
   name        = "haos-16.3"
@@ -186,13 +128,13 @@ resource "proxmox_virtual_environment_vm" "home_assistant" {
   }
 }
 
-# VM 101: Clone Template (currently stopped)
-resource "proxmox_virtual_environment_vm" "clone_template" {
-  name        = "clone-template-VM"
-  description = "Template VM for cloning new Ubuntu VMs"
+# VM 105: K3s - Lightweight Kubernetes
+resource "proxmox_virtual_environment_vm" "k3s" {
+  name        = "k3s"
+  description = "K3s - Lightweight Kubernetes cluster with ArgoCD"
   node_name   = var.proxmox_node
-  vm_id       = 101
-  on_boot     = false
+  vm_id       = 105
+  on_boot     = true
 
   cpu {
     cores = 2
@@ -200,7 +142,7 @@ resource "proxmox_virtual_environment_vm" "clone_template" {
   }
 
   memory {
-    dedicated = 8192  # 8GB
+    dedicated = 4096  # 4GB
   }
 
   bios = "ovmf"
@@ -220,7 +162,7 @@ resource "proxmox_virtual_environment_vm" "clone_template" {
     datastore_id = var.storage_pool
     interface    = "scsi0"
     iothread     = true
-    size         = 64
+    size         = 50
     file_format  = "raw"
   }
 
@@ -228,6 +170,8 @@ resource "proxmox_virtual_environment_vm" "clone_template" {
     datastore_id = var.storage_pool
     type         = "4m"
   }
+
+  serial_device {}
 
   operating_system {
     type = "l26"
@@ -241,3 +185,4 @@ resource "proxmox_virtual_environment_vm" "clone_template" {
     ]
   }
 }
+

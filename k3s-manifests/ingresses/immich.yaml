@@ -1,0 +1,51 @@
+---
+# Immich - Photo Management
+# Domain: photos.halitdincer.com
+# Backend: 192.168.2.202:2283
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: immich
+  namespace: default
+  annotations:
+    # Automatic SSL certificate from Let's Encrypt
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Force HTTPS redirect
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # Large file uploads for photos
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    # Increase timeouts for large uploads
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - photos.halitdincer.com
+    secretName: immich-tls
+  rules:
+  - host: photos.halitdincer.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: immich-external
+            port:
+              number: 2283
+
+---
+# External Service pointing to Immich VM
+apiVersion: v1
+kind: Service
+metadata:
+  name: immich-external
+  namespace: default
+spec:
+  type: ExternalName
+  externalName: 192.168.2.202
+  ports:
+  - port: 2283
+    targetPort: 2283
