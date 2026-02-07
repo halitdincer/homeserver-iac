@@ -1,0 +1,208 @@
+---
+# Homepage - Homeserver Dashboard
+# Domain: home.halitdincer.com
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: homepage
+  namespace: default
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: homepage-token
+  namespace: default
+  annotations:
+    kubernetes.io/service-account.name: homepage
+type: kubernetes.io/service-account-token
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: homepage
+rules:
+- apiGroups: [""]
+  resources: ["namespaces", "pods", "nodes"]
+  verbs: ["get", "list"]
+- apiGroups: ["extensions", "networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["nodes", "pods"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: homepage
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: homepage
+subjects:
+- kind: ServiceAccount
+  name: homepage
+  namespace: default
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homepage-config
+  namespace: default
+data:
+  settings.yaml: |
+    title: Halit's Homeserver
+    favicon: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/home-assistant.png
+    headerStyle: clean
+    layout:
+      Services:
+        style: row
+        columns: 3
+      Infrastructure:
+        style: row
+        columns: 3
+
+  bookmarks.yaml: |
+    []
+
+  services.yaml: |
+    - Services:
+        - Immich:
+            icon: immich.png
+            href: https://photos.halitdincer.com
+            description: Photo Management
+            widget:
+              type: immich
+              url: http://192.168.2.202:2283
+        - Home Assistant:
+            icon: home-assistant.png
+            href: https://ha.halitdincer.com
+            description: Smart Home
+            widget:
+              type: homeassistant
+              url: http://192.168.2.206:8123
+        - ArgoCD:
+            icon: argocd.png
+            href: https://argocd.halitdincer.com
+            description: GitOps Deployments
+
+    - Infrastructure:
+        - Proxmox:
+            icon: proxmox.png
+            href: https://proxmox.halitdincer.com
+            description: Hypervisor
+            widget:
+              type: proxmox
+              url: https://192.168.2.50:8006
+        - K3s Cluster:
+            icon: kubernetes.png
+            description: Lightweight Kubernetes
+
+  widgets.yaml: |
+    - kubernetes:
+        cluster:
+          show: true
+          cpu: true
+          memory: true
+          showLabel: true
+          label: "K3s Cluster"
+        nodes:
+          show: true
+          cpu: true
+          memory: true
+          showLabel: true
+
+    - datetime:
+        text_size: xl
+        format:
+          dateStyle: long
+          timeStyle: short
+
+  kubernetes.yaml: |
+    mode: cluster
+
+  docker.yaml: |
+    []
+
+  custom.css: ""
+  custom.js: ""
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homepage
+  namespace: default
+  labels:
+    app: homepage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: homepage
+  template:
+    metadata:
+      labels:
+        app: homepage
+    spec:
+      serviceAccountName: homepage
+      containers:
+      - name: homepage
+        image: ghcr.io/gethomepage/homepage:latest
+        ports:
+        - name: http
+          containerPort: 3000
+        env:
+        - name: HOMEPAGE_ALLOWED_HOSTS
+          value: "home.halitdincer.com"
+        volumeMounts:
+        - name: config
+          mountPath: /app/config/settings.yaml
+          subPath: settings.yaml
+        - name: config
+          mountPath: /app/config/bookmarks.yaml
+          subPath: bookmarks.yaml
+        - name: config
+          mountPath: /app/config/services.yaml
+          subPath: services.yaml
+        - name: config
+          mountPath: /app/config/widgets.yaml
+          subPath: widgets.yaml
+        - name: config
+          mountPath: /app/config/kubernetes.yaml
+          subPath: kubernetes.yaml
+        - name: config
+          mountPath: /app/config/docker.yaml
+          subPath: docker.yaml
+        - name: config
+          mountPath: /app/config/custom.css
+          subPath: custom.css
+        - name: config
+          mountPath: /app/config/custom.js
+          subPath: custom.js
+        - name: logs
+          mountPath: /app/config/logs
+      volumes:
+      - name: config
+        configMap:
+          name: homepage-config
+      - name: logs
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: homepage
+  namespace: default
+spec:
+  selector:
+    app: homepage
+  ports:
+  - name: http
+    port: 3000
+    targetPort: http
