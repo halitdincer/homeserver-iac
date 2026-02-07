@@ -12,8 +12,6 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     # Force HTTPS redirect
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    # Preserve original Host header (required for ExternalName with IP)
-    nginx.ingress.kubernetes.io/upstream-vhost: "$host"
     # WebSocket support for Home Assistant
     nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
     nginx.ingress.kubernetes.io/proxy-set-headers: |
@@ -52,15 +50,25 @@ spec:
               number: 8123
 
 ---
-# External Service pointing to Home Assistant VM
+# ClusterIP service with manual Endpoints pointing to Home Assistant VM
 apiVersion: v1
 kind: Service
 metadata:
   name: home-assistant-external
   namespace: default
 spec:
-  type: ExternalName
-  externalName: 192.168.2.206
   ports:
   - port: 8123
     targetPort: 8123
+
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: home-assistant-external
+  namespace: default
+subsets:
+- addresses:
+  - ip: 192.168.2.206
+  ports:
+  - port: 8123
