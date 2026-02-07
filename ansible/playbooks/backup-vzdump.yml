@@ -1,0 +1,83 @@
+---
+# Proxmox vzdump scheduled backup for VMs
+# Creates a weekly backup job and runs an initial backup on first deploy
+
+- name: Configure Proxmox vzdump scheduled backups
+  hosts: proxmox_host
+  become: yes
+
+  vars:
+    backup_job_id: "backup-weekly-all"
+    backup_vmids: "100,103,105"
+    backup_schedule: "sun 02:00"
+    backup_mode: "snapshot"
+    backup_compress: "zstd"
+    backup_storage: "local"
+    backup_keep_last: 2
+    backup_mailto: "root@pam"
+
+  tasks:
+    - name: Check for existing backup jobs
+      command: pvesh get /cluster/backup --output-format json
+      register: existing_jobs
+      changed_when: false
+
+    - name: Parse existing backup jobs
+      set_fact:
+        job_exists: "{{ existing_jobs.stdout | from_json | selectattr('comment', 'defined') | selectattr('comment', 'equalto', backup_job_id) | list | length > 0 }}"
+        existing_job_list: "{{ existing_jobs.stdout | from_json }}"
+
+    - name: Create vzdump backup job
+      command: >
+        pvesh create /cluster/backup
+        --enabled 1
+        --vmid {{ backup_vmids }}
+        --schedule "{{ backup_schedule }}"
+        --mode {{ backup_mode }}
+        --compress {{ backup_compress }}
+        --storage {{ backup_storage }}
+        --prune-backups keep-last={{ backup_keep_last }}
+        --mailto {{ backup_mailto }}
+        --comment {{ backup_job_id }}
+        --notes-template "{{'{{'}}guestname{{'}}'}} - Automated weekly backup"
+      when: not job_exists
+
+    - name: Display backup job status
+      debug:
+        msg: >-
+          {{ 'Backup job already exists, skipping creation.' if job_exists
+          else 'Created weekly backup job for VMs ' + backup_vmids }}
+
+    - name: Check if any backups exist for VM 100
+      find:
+        paths: /var/lib/vz/dump/
+        patterns: "vzdump-qemu-100-*"
+      register: existing_backups
+
+    - name: Run initial backup if no backups exist
+      command: >
+        vzdump {{ backup_vmids }}
+        --mode {{ backup_mode }}
+        --compress {{ backup_compress }}
+        --storage {{ backup_storage }}
+        --prune-backups keep-last={{ backup_keep_last }}
+        --notes-template "{{'{{'}}guestname{{'}}'}} - Initial backup"
+      when: existing_backups.matched == 0
+      async: 7200
+      poll: 30
+
+    - name: Show backup storage usage
+      command: du -sh /var/lib/vz/dump/
+      register: backup_size
+      changed_when: false
+
+    - name: Display backup info
+      debug:
+        msg:
+          - "==== Vzdump Backup Configuration ===="
+          - "Schedule: {{ backup_schedule }}"
+          - "VMs: {{ backup_vmids }}"
+          - "Mode: {{ backup_mode }}, Compression: {{ backup_compress }}"
+          - "Storage: {{ backup_storage }}"
+          - "Retention: keep-last={{ backup_keep_last }}"
+          - "Current backup storage usage: {{ backup_size.stdout }}"

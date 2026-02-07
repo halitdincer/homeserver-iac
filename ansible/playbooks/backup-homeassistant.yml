@@ -1,0 +1,86 @@
+---
+# Home Assistant backup via REST API
+# HAOS has no SSH - must use the built-in API
+#
+# Prerequisites:
+#   1. Create a long-lived access token in HA:
+#      Settings -> Profile -> Security -> Long-Lived Access Tokens -> Create
+#   2. Add to secrets.yml: ansible-vault edit ansible/secrets.yml
+#      ha_long_lived_token: "your_token_here"
+#
+# Usage:
+#   ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/backup-homeassistant.yml --ask-vault-pass
+#
+# Note: For scheduled backups, configure via HA UI:
+#   Settings -> System -> Backups -> Configure automatic backups
+
+- name: Trigger Home Assistant backup
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    ha_url: "http://192.168.2.206:8123"
+
+  vars_files:
+    - ../secrets.yml
+
+  tasks:
+    - name: Verify HA token is configured
+      assert:
+        that:
+          - ha_long_lived_token is defined
+          - ha_long_lived_token | length > 0
+        fail_msg: >
+          ha_long_lived_token is not set in secrets.yml.
+          Create a token in HA (Profile -> Security -> Long-Lived Access Tokens)
+          and add it: ansible-vault edit ansible/secrets.yml
+
+    - name: Check Home Assistant is reachable
+      uri:
+        url: "{{ ha_url }}/api/"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ ha_long_lived_token }}"
+        validate_certs: no
+        status_code: 200
+      register: ha_status
+
+    - name: Display HA version
+      debug:
+        msg: "Home Assistant {{ ha_status.json.version }} is online"
+
+    - name: Trigger backup creation
+      uri:
+        url: "{{ ha_url }}/api/services/backup/create"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ ha_long_lived_token }}"
+          Content-Type: "application/json"
+        validate_certs: no
+        status_code: [200, 201]
+      register: backup_result
+
+    - name: Wait for backup to complete
+      pause:
+        seconds: 30
+        prompt: "Waiting for backup to be created..."
+
+    - name: List existing backups
+      uri:
+        url: "{{ ha_url }}/api/backups"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ ha_long_lived_token }}"
+        validate_certs: no
+      register: backups_list
+
+    - name: Display backup info
+      debug:
+        msg:
+          - "==== Home Assistant Backup ===="
+          - "Backup triggered successfully"
+          - "Total backups stored: {{ backups_list.json.backups | length }}"
+          - ""
+          - "Tip: Configure automatic backups in HA UI:"
+          - "  Settings -> System -> Backups -> Configure automatic backups"

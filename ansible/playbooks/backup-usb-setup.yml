@@ -1,0 +1,153 @@
+---
+# One-time USB backup drive setup for Proxmox
+# Run this when the external USB drive arrives
+#
+# Usage:
+#   ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/backup-usb-setup.yml -e usb_device=/dev/sdX
+#
+# IMPORTANT: Double-check the device name before running!
+#   SSH to Proxmox and run: lsblk
+#   The USB drive will typically be /dev/sdb or /dev/sdc
+
+- name: Set up USB backup drive on Proxmox
+  hosts: proxmox_host
+  become: yes
+
+  vars:
+    usb_device: ""  # Must be passed via -e usb_device=/dev/sdX
+    usb_mount_point: /mnt/usb-backup
+    usb_label: "USB-BACKUP"
+    proxmox_storage_name: "usb-backup"
+    backup_keep_last: 4
+    backup_keep_weekly: 4
+
+  tasks:
+    # --- Safety checks ---
+    - name: Fail if no USB device specified
+      assert:
+        that:
+          - usb_device | length > 0
+          - usb_device != "/dev/sda"
+        fail_msg: >
+          You must specify the USB device: -e usb_device=/dev/sdX
+          NEVER use /dev/sda (that's the boot disk).
+          Run 'lsblk' on the Proxmox host to find the correct device.
+
+    - name: Check if device exists
+      stat:
+        path: "{{ usb_device }}"
+      register: device_check
+
+    - name: Fail if device does not exist
+      assert:
+        that: device_check.stat.exists
+        fail_msg: "Device {{ usb_device }} does not exist. Check lsblk output."
+
+    - name: Get device info
+      command: lsblk -o NAME,SIZE,TYPE,MOUNTPOINT {{ usb_device }}
+      register: device_info
+      changed_when: false
+
+    - name: Show device info and confirm
+      pause:
+        prompt: |
+          === WARNING: This will ERASE all data on {{ usb_device }} ===
+
+          Device info:
+          {{ device_info.stdout }}
+
+          Type 'YES' to proceed with formatting
+      register: user_confirm
+
+    - name: Abort if not confirmed
+      assert:
+        that: user_confirm.user_input == "YES"
+        fail_msg: "Aborted. Device will not be formatted."
+
+    # --- Format and mount ---
+    - name: Create partition table
+      command: parted -s {{ usb_device }} mklabel gpt mkpart primary ext4 0% 100%
+
+    - name: Format partition as ext4
+      filesystem:
+        fstype: ext4
+        dev: "{{ usb_device }}1"
+        opts: "-L {{ usb_label }}"
+
+    - name: Create mount point
+      file:
+        path: "{{ usb_mount_point }}"
+        state: directory
+        mode: '0755'
+
+    - name: Add to fstab with nofail
+      mount:
+        path: "{{ usb_mount_point }}"
+        src: "LABEL={{ usb_label }}"
+        fstype: ext4
+        opts: "defaults,nofail,x-systemd.device-timeout=30"
+        state: mounted
+
+    - name: Create backup subdirectories
+      file:
+        path: "{{ usb_mount_point }}/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - vzdump
+        - immich-photos
+        - immich-db
+
+    # --- Register as Proxmox storage ---
+    - name: Check if Proxmox storage already exists
+      command: pvesm status --storage {{ proxmox_storage_name }}
+      register: storage_check
+      failed_when: false
+      changed_when: false
+
+    - name: Add USB as Proxmox storage pool
+      command: >
+        pvesm add dir {{ proxmox_storage_name }}
+        --path {{ usb_mount_point }}/vzdump
+        --content backup
+        --shared 0
+      when: storage_check.rc != 0
+
+    # --- Update vzdump job to use USB ---
+    - name: Get existing backup jobs
+      command: pvesh get /cluster/backup --output-format json
+      register: existing_jobs
+      changed_when: false
+
+    - name: Find weekly backup job ID
+      set_fact:
+        weekly_job: "{{ existing_jobs.stdout | from_json | selectattr('comment', 'defined') | selectattr('comment', 'equalto', 'backup-weekly-all') | first }}"
+      ignore_errors: yes
+
+    - name: Update vzdump job to use USB storage
+      command: >
+        pvesh set /cluster/backup/{{ weekly_job.id }}
+        --storage {{ proxmox_storage_name }}
+        --prune-backups keep-last={{ backup_keep_last }},keep-weekly={{ backup_keep_weekly }}
+      when: weekly_job is defined and weekly_job.id is defined
+
+    - name: Display setup summary
+      debug:
+        msg:
+          - "==== USB Backup Drive Setup Complete ===="
+          - ""
+          - "Device: {{ usb_device }}"
+          - "Mount: {{ usb_mount_point }}"
+          - "Label: {{ usb_label }}"
+          - "Proxmox storage: {{ proxmox_storage_name }}"
+          - ""
+          - "Directories created:"
+          - "  {{ usb_mount_point }}/vzdump     - VM backups (vzdump)"
+          - "  {{ usb_mount_point }}/immich-photos - Photo rsync backups"
+          - "  {{ usb_mount_point }}/immich-db     - DB dump copies"
+          - ""
+          - "Vzdump retention: keep-last={{ backup_keep_last }}, keep-weekly={{ backup_keep_weekly }}"
+          - ""
+          - "Next steps:"
+          - "  1. Run backup-photos.yml to sync Immich photos"
+          - "  2. Verify backups with: ls -lh {{ usb_mount_point }}/"

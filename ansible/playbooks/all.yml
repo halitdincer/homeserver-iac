@@ -13,6 +13,7 @@
 - import_playbook: nginx-proxy-manager.yml
 - import_playbook: immich.yml
 - import_playbook: home-assistant.yml
+- import_playbook: backup.yml
 
 - name: Summary
   hosts: localhost

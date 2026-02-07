@@ -1,0 +1,39 @@
+---
+# Master backup playbook
+# Runs all backup tasks that can be activated now (no USB drive required)
+#
+# Usage:
+#   ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/backup.yml --ask-vault-pass
+#
+# For USB-dependent backups, run separately:
+#   ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/backup-usb-setup.yml -e usb_device=/dev/sdX
+#   ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/backup-photos.yml
+
+- import_playbook: backup-vzdump.yml
+- import_playbook: backup-immich-db.yml
+- import_playbook: backup-homeassistant.yml
+
+- name: Backup Summary
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Display backup summary
+      debug:
+        msg:
+          - "==== Backup System Summary ===="
+          - ""
+          - "Active backups:"
+          - "  1. Vzdump (VMs 100, 103, 105) - Weekly Sunday 02:00"
+          - "  2. Immich DB (pg_dump)         - Daily at 03:00"
+          - "  3. Home Assistant (API backup) - On-demand / HA scheduled"
+          - ""
+          - "Pending (requires USB drive):"
+          - "  4. USB drive setup             - Run backup-usb-setup.yml"
+          - "  5. Immich photos rsync         - Run backup-photos.yml"
+          - ""
+          - "Verification commands:"
+          - "  ssh root@192.168.2.50 'pvesh get /cluster/backup --output-format json-pretty'"
+          - "  ssh root@192.168.2.50 'ls -lh /var/lib/vz/dump/'"
+          - "  ssh root@192.168.2.202 'ls -lh /opt/immich/backups/'"
+          - "  ssh root@192.168.2.202 'crontab -l'"

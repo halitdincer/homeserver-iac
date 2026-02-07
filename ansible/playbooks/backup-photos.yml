@@ -1,0 +1,84 @@
+---
+# Rsync Immich photos from VM 100 to USB backup drive on Proxmox host
+# Requires USB backup drive to be set up first (backup-usb-setup.yml)
+#
+# Usage:
+#   ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/backup-photos.yml
+#
+# This can be run manually or scheduled as a weekly cron job
+
+- name: Backup Immich photos via rsync
+  hosts: proxmox_host
+  become: yes
+
+  vars:
+    immich_host: "192.168.2.202"
+    immich_source: "/mnt/immich-data/"
+    usb_mount_point: /mnt/usb-backup
+    backup_dest: "{{ usb_mount_point }}/immich-photos/"
+    rsync_log: "{{ usb_mount_point }}/immich-photos-rsync.log"
+    cron_enabled: false  # Set to true with -e cron_enabled=true to add weekly cron
+
+  tasks:
+    - name: Check USB backup drive is mounted
+      command: mountpoint -q {{ usb_mount_point }}
+      register: mount_check
+      failed_when: false
+      changed_when: false
+
+    - name: Fail if USB drive not mounted
+      assert:
+        that: mount_check.rc == 0
+        fail_msg: >
+          USB backup drive is not mounted at {{ usb_mount_point }}.
+          Run backup-usb-setup.yml first, or check the drive connection.
+
+    - name: Ensure backup destination exists
+      file:
+        path: "{{ backup_dest }}"
+        state: directory
+        mode: '0755'
+
+    - name: Check SSH connectivity to Immich VM
+      command: ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no root@{{ immich_host }} echo ok
+      register: ssh_check
+      changed_when: false
+
+    - name: Rsync Immich photos to USB backup
+      command: >
+        rsync -avz --delete
+        --log-file={{ rsync_log }}
+        root@{{ immich_host }}:{{ immich_source }}
+        {{ backup_dest }}
+      register: rsync_result
+      async: 86400
+      poll: 60
+
+    - name: Get backup size
+      command: du -sh {{ backup_dest }}
+      register: backup_size
+      changed_when: false
+
+    - name: Set up weekly cron job for photo backup
+      cron:
+        name: "immich-photos-backup"
+        weekday: "0"
+        hour: "4"
+        minute: "0"
+        job: >
+          rsync -avz --delete
+          --log-file={{ rsync_log }}
+          root@{{ immich_host }}:{{ immich_source }}
+          {{ backup_dest }}
+        user: root
+      when: cron_enabled | bool
+
+    - name: Display backup info
+      debug:
+        msg:
+          - "==== Immich Photos Backup ===="
+          - "Source: root@{{ immich_host }}:{{ immich_source }}"
+          - "Destination: {{ backup_dest }}"
+          - "Backup size: {{ backup_size.stdout }}"
+          - "Log: {{ rsync_log }}"
+          - "{{ 'Cron: Weekly Sunday 04:00' if cron_enabled | bool else 'Cron: Not enabled (use -e cron_enabled=true)' }}"
