@@ -48,7 +48,10 @@ spec:
           containerPort: 8080
         env:
         - name: PASSWORD
-          value: "changeme"
+          valueFrom:
+            secretKeyRef:
+              name: code-server-secret
+              key: password
         volumeMounts:
         - name: data
           mountPath: /home/coder
