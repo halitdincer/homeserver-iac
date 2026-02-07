@@ -1,0 +1,72 @@
+---
+# code-server - VS Code in the Browser
+# Domain: code.halitdincer.com
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: code-server
+  namespace: default
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: code-server-data
+  namespace: default
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: code-server
+  namespace: default
+  labels:
+    app: code-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: code-server
+  template:
+    metadata:
+      labels:
+        app: code-server
+    spec:
+      serviceAccountName: code-server
+      containers:
+      - name: code-server
+        image: codercom/code-server:latest
+        ports:
+        - name: http
+          containerPort: 8080
+        env:
+        - name: PASSWORD
+          value: "changeme"
+        volumeMounts:
+        - name: data
+          mountPath: /home/coder
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: code-server-data
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: code-server
+  namespace: default
+spec:
+  selector:
+    app: code-server
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
