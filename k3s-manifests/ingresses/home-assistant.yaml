@@ -12,6 +12,8 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     # Force HTTPS redirect
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # Preserve original Host header (required for ExternalName with IP)
+    nginx.ingress.kubernetes.io/upstream-vhost: "$host"
     # WebSocket support for Home Assistant
     nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
     nginx.ingress.kubernetes.io/proxy-set-headers: |
