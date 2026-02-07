@@ -1,0 +1,31 @@
+---
+# ArgoCD Application for Infrastructure Components
+# This manages nginx-ingress and cert-manager configurations
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: infrastructure
+  namespace: argocd
+spec:
+  # Source: Your Git repository
+  source:
+    repoURL: git@github.com:halitdincer/homeserver-iac.git
+    targetRevision: main
+    path: k3s-manifests/infrastructure
+
+  # Destination: K3s cluster
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+
+  # Sync policy: Automatic deployment on Git push
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+
+  # Project
+  project: default
