@@ -1,0 +1,78 @@
+---
+- name: Configure OpenClaw VM
+  hosts: openclaw
+  become: yes
+
+  vars:
+    openclaw_data_path: /opt/openclaw
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install required packages
+      apt:
+        name:
+          - docker.io
+          - docker-compose-v2
+          - curl
+          - qemu-guest-agent
+        state: present
+
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Start and enable QEMU guest agent
+      systemd:
+        name: qemu-guest-agent
+        state: started
+        enabled: yes
+
+    - name: Add dincer user to docker group
+      user:
+        name: dincer
+        groups: docker
+        append: yes
+
+    - name: Create OpenClaw data directory
+      file:
+        path: "{{ openclaw_data_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Deploy OpenClaw docker-compose.yml
+      copy:
+        dest: "{{ openclaw_data_path }}/docker-compose.yml"
+        content: |
+          services:
+            openclaw:
+              container_name: openclaw
+              image: ghcr.io/openclaw-ai/openclaw:latest
+              ports:
+                - "18789:18789"
+              volumes:
+                - openclaw-data:/app/data
+                - /etc/localtime:/etc/localtime:ro
+              restart: always
+
+          volumes:
+            openclaw-data:
+
+    - name: Start OpenClaw containers
+      community.docker.docker_compose_v2:
+        project_src: "{{ openclaw_data_path }}"
+        state: present
+      register: output
+      ignore_errors: yes
+
+    - name: Show OpenClaw deployment status
+      debug:
+        msg: >-
+          {{ 'OpenClaw is running at http://' + ansible_host + ':18789'
+             if output is succeeded
+             else 'OpenClaw docker-compose deployed to ' + openclaw_data_path + ' but container image not yet available. Update docker-compose.yml with correct image and run: docker compose -f ' + openclaw_data_path + '/docker-compose.yml up -d' }}

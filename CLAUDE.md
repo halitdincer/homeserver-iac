@@ -10,6 +10,7 @@ Domain: `halitdincer.com` (Namecheap, DNS managed via Terraform). DDNS via No-IP
 |------|-------------------|-----|---------|------|-----|
 | 100 | `proxmox_virtual_environment_vm.immich` | 192.168.2.202 | Immich (photos) | 2283 | photos.halitdincer.com |
 | 103 | `proxmox_virtual_environment_vm.home_assistant` | 192.168.2.206 | Home Assistant OS | 8123 | ha.halitdincer.com |
+| 104 | `proxmox_virtual_environment_vm.openclaw` | 192.168.2.208 | OpenClaw (AI assistant) | 18789 | openclaw.halitdincer.com |
 | 105 | `proxmox_virtual_environment_vm.k3s` | 192.168.2.216 | K3s (ingress, ArgoCD, cert-manager) | 80,443 | argocd.halitdincer.com |
 
 All Ubuntu VMs run 24.04.3 LTS with Docker. Home Assistant runs HAOS 16.3 (no SSH - use REST API).
@@ -18,9 +19,10 @@ All Ubuntu VMs run 24.04.3 LTS with Docker. Home Assistant runs HAOS 16.3 (no SS
 
 ```
 Internet → Router (192.168.2.1, ports 80/443) → K3s nginx ingress (192.168.2.216)
-  ├── photos.halitdincer.com → 192.168.2.202:2283 (Immich)
-  ├── ha.halitdincer.com     → 192.168.2.206:8123 (Home Assistant)
-  └── argocd.halitdincer.com → K3s internal (ArgoCD)
+  ├── photos.halitdincer.com    → 192.168.2.202:2283 (Immich)
+  ├── ha.halitdincer.com        → 192.168.2.206:8123 (Home Assistant)
+  ├── openclaw.halitdincer.com  → 192.168.2.208:18789 (OpenClaw)
+  └── argocd.halitdincer.com    → K3s internal (ArgoCD)
 
 Proxmox host: 192.168.2.50:8006
 DNS: *.halitdincer.com → CNAME → halitdincer.ddns.net → public IP (managed in terraform/dns.tf)
@@ -44,6 +46,7 @@ ansible/
     all.yml              - Master playbook (runs all below)
     immich.yml           - Immich deployment
     home-assistant.yml   - Home Assistant management
+    openclaw.yml         - OpenClaw deployment
     backup.yml           - Backup configuration
   secrets.yml        - Ansible vault encrypted secrets
   ansible.cfg        - Ansible config (GITIGNORED)
@@ -75,6 +78,7 @@ ansible all -i ansible/inventory/hosts.yml -m ping
 ## SSH Access
 
 - **Immich (VM 100)**: `ssh root@192.168.2.202`
+- **OpenClaw (VM 104)**: `ssh dincer@192.168.2.208`
 - **K3s (VM 105)**: `ssh root@192.168.2.216`
 - **Home Assistant (VM 103)**: No SSH. HAOS only - use REST API at port 8123
 - **Proxmox host**: `ssh root@192.168.2.50`

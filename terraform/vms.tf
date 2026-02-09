@@ -1,3 +1,12 @@
+# Ubuntu 24.04 Cloud Image
+resource "proxmox_virtual_environment_download_file" "ubuntu_cloud_image" {
+  content_type = "iso"
+  datastore_id = var.iso_storage
+  node_name    = var.proxmox_node
+  url          = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
+  file_name    = "noble-server-cloudimg-amd64.img"
+}
+
 # VM 100: Immich - Photo Management
 resource "proxmox_virtual_environment_vm" "immich" {
   name        = "immich"
@@ -186,3 +195,79 @@ resource "proxmox_virtual_environment_vm" "k3s" {
   }
 }
 
+# VM 104: OpenClaw - Personal AI Assistant
+resource "proxmox_virtual_environment_vm" "openclaw" {
+  name        = "openclaw"
+  description = "OpenClaw - Personal AI assistant"
+  node_name   = var.proxmox_node
+  vm_id       = 104
+  on_boot     = true
+
+  cpu {
+    cores = 2
+    type  = "host"
+  }
+
+  memory {
+    dedicated = 2048  # 2GB
+  }
+
+  bios = "ovmf"
+  machine = "q35"
+  scsi_hardware = "virtio-scsi-single"
+
+  agent {
+    enabled = true
+  }
+
+  network_device {
+    bridge = var.network_bridge
+    model  = "virtio"
+  }
+
+  disk {
+    datastore_id = var.storage_pool
+    interface    = "scsi0"
+    iothread     = true
+    size         = 20
+    file_id      = proxmox_virtual_environment_download_file.ubuntu_cloud_image.id
+  }
+
+  efi_disk {
+    datastore_id = var.storage_pool
+    type         = "4m"
+  }
+
+  serial_device {}
+
+  operating_system {
+    type = "l26"
+  }
+
+  initialization {
+    ip_config {
+      ipv4 {
+        address = "192.168.2.208/24"
+        gateway = var.network_gateway
+      }
+    }
+
+    dns {
+      servers = split(" ", var.dns_servers)
+    }
+
+    user_account {
+      username = "dincer"
+      password = var.vm_default_password
+      keys     = [var.ssh_public_key]
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      network_device,
+      disk,
+      started,
+    ]
+  }
+}

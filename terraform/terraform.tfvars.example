@@ -17,6 +17,9 @@ dns_servers     = "192.168.2.1 8.8.8.8"
 # SSH public key for VM access (optional)
 ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EA... your-key-here"
 
+# Default password for cloud-init VMs
+vm_default_password = "your-password-here"
+
 # Storage
 storage_pool = "local-lvm"
 iso_storage  = "local"

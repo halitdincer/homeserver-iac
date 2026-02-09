@@ -78,6 +78,13 @@ variable "iso_storage" {
   default     = "local"
 }
 
+# Cloud-init VM credentials
+variable "vm_default_password" {
+  description = "Default password for cloud-init VMs"
+  type        = string
+  sensitive   = true
+}
+
 # Namecheap DNS
 variable "namecheap_user_name" {
   description = "Namecheap account username"

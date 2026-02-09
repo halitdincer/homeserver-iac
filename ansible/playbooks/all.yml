@@ -12,6 +12,7 @@
 
 - import_playbook: immich.yml
 - import_playbook: home-assistant.yml
+- import_playbook: openclaw.yml
 - import_playbook: backup.yml
 
 - name: Summary
@@ -26,11 +27,13 @@
           - "Services:"
           - "  - Immich: http://192.168.2.202:2283"
           - "  - Home Assistant: http://192.168.2.206:8123"
+          - "  - OpenClaw: http://192.168.2.208:18789"
           - "  - K3s (nginx ingress): http://192.168.2.216"
           - ""
           - "External URLs (via K3s ingress):"
           - "  - https://photos.halitdincer.com"
           - "  - https://ha.halitdincer.com"
+          - "  - https://openclaw.halitdincer.com"
           - "  - https://argocd.halitdincer.com"
           - ""
           - "Routing: Internet -> Router (80/443) -> K3s ingress (192.168.2.216)"

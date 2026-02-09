@@ -1,0 +1,63 @@
+---
+# OpenClaw - Personal AI Assistant
+# Domain: openclaw.halitdincer.com
+# Backend: 192.168.2.208:18789
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openclaw
+  namespace: default
+  annotations:
+    # Automatic SSL certificate from Let's Encrypt
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Force HTTPS redirect
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # WebSocket support
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/proxy-set-headers: |
+      Upgrade $http_upgrade
+      Connection "upgrade"
+    # Increase timeouts
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - openclaw.halitdincer.com
+    secretName: openclaw-tls
+  rules:
+  - host: openclaw.halitdincer.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: openclaw-external
+            port:
+              number: 18789
+
+---
+# ClusterIP service with manual Endpoints pointing to OpenClaw VM
+apiVersion: v1
+kind: Service
+metadata:
+  name: openclaw-external
+  namespace: default
+spec:
+  ports:
+  - port: 18789
+    targetPort: 18789
+
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: openclaw-external
+  namespace: default
+subsets:
+- addresses:
+  - ip: 192.168.2.208
+  ports:
+  - port: 18789
