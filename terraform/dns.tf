@@ -20,6 +20,22 @@ resource "namecheap_domain_records" "halitdincer" {
     ttl      = 1800
   }
 
+  # ── OpenClaw instances - Tailscale-only access (static Tailscale IP) ──
+
+  record {
+    hostname = "openclaw"
+    type     = "A"
+    address  = "100.82.144.118"
+    ttl      = 1800
+  }
+
+  record {
+    hostname = "openclaw-house"
+    type     = "A"
+    address  = "100.82.144.118"
+    ttl      = 1800
+  }
+
   record {
     hostname = "www"
     type     = "CNAME"
