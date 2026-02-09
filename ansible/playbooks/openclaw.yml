@@ -3,9 +3,6 @@
   hosts: openclaw
   become: yes
 
-  vars:
-    openclaw_data_path: /opt/openclaw
-
   tasks:
     - name: Update apt cache
       apt:
@@ -15,17 +12,9 @@
     - name: Install required packages
       apt:
         name:
-          - docker.io
-          - docker-compose-v2
           - curl
           - qemu-guest-agent
         state: present
-
-    - name: Start and enable Docker
-      systemd:
-        name: docker
-        state: started
-        enabled: yes
 
     - name: Start and enable QEMU guest agent
       systemd:
@@ -33,46 +22,55 @@
         state: started
         enabled: yes
 
-    - name: Add dincer user to docker group
-      user:
-        name: dincer
-        groups: docker
-        append: yes
+    - name: Ensure swap file exists
+      shell: |
+        if [ ! -f /swapfile ]; then
+          fallocate -l 2G /swapfile
+          chmod 600 /swapfile
+          mkswap /swapfile
+          swapon /swapfile
+          echo '/swapfile none swap sw 0 0' >> /etc/fstab
+        fi
+      args:
+        creates: /swapfile
 
-    - name: Create OpenClaw data directory
-      file:
-        path: "{{ openclaw_data_path }}"
-        state: directory
-        mode: '0755'
-
-    - name: Deploy OpenClaw docker-compose.yml
-      copy:
-        dest: "{{ openclaw_data_path }}/docker-compose.yml"
-        content: |
-          services:
-            openclaw:
-              container_name: openclaw
-              image: ghcr.io/openclaw-ai/openclaw:latest
-              ports:
-                - "18789:18789"
-              volumes:
-                - openclaw-data:/app/data
-                - /etc/localtime:/etc/localtime:ro
-              restart: always
-
-          volumes:
-            openclaw-data:
-
-    - name: Start OpenClaw containers
-      community.docker.docker_compose_v2:
-        project_src: "{{ openclaw_data_path }}"
-        state: present
-      register: output
+    - name: Install OpenClaw via official installer
+      shell: curl -fsSL https://openclaw.ai/install.sh | bash
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+      args:
+        creates: /usr/bin/openclaw
+      register: openclaw_install
       ignore_errors: yes
 
-    - name: Show OpenClaw deployment status
+    - name: Create openclaw systemd service
+      copy:
+        dest: /etc/systemd/system/openclaw.service
+        content: |
+          [Unit]
+          Description=OpenClaw Gateway
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=dincer
+          ExecStart=/usr/bin/openclaw gateway --port 18789
+          Restart=on-failure
+          RestartSec=5
+          Environment=NODE_ENV=production
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: reload systemd
+
+    - name: Show deployment status
       debug:
         msg: >-
-          {{ 'OpenClaw is running at http://' + ansible_host + ':18789'
-             if output is succeeded
-             else 'OpenClaw docker-compose deployed to ' + openclaw_data_path + ' but container image not yet available. Update docker-compose.yml with correct image and run: docker compose -f ' + openclaw_data_path + '/docker-compose.yml up -d' }}
+          OpenClaw v{{ openclaw_install.stdout | default('') | regex_search('([0-9]+\.[0-9]+\.[0-9]+-[0-9]+)') | default('unknown') }} installed.
+          Run 'openclaw setup' interactively via SSH (ssh dincer@{{ ansible_host }}) to complete configuration,
+          then 'sudo systemctl enable --now openclaw' to start the gateway on port 18789.
+
+  handlers:
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes
