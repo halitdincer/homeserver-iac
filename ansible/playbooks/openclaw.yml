@@ -40,37 +40,25 @@
         DEBIAN_FRONTEND: noninteractive
       args:
         creates: /usr/bin/openclaw
-      register: openclaw_install
-      ignore_errors: yes
 
-    - name: Create openclaw systemd service
-      copy:
-        dest: /etc/systemd/system/openclaw.service
-        content: |
-          [Unit]
-          Description=OpenClaw Gateway
-          After=network.target
+    - name: Run OpenClaw onboard (non-interactive)
+      become: no
+      shell: >
+        openclaw onboard
+        --non-interactive
+        --accept-risk
+        --flow quickstart
+        --gateway-port 18789
+        --gateway-bind lan
+        --gateway-auth token
+        --install-daemon
+        --skip-channels
+        --skip-skills
+        --skip-ui
+        --auth-choice skip
+      args:
+        creates: /home/dincer/.openclaw/openclaw.json
 
-          [Service]
-          Type=simple
-          User=dincer
-          ExecStart=/usr/bin/openclaw gateway --port 18789
-          Restart=on-failure
-          RestartSec=5
-          Environment=NODE_ENV=production
-
-          [Install]
-          WantedBy=multi-user.target
-      notify: reload systemd
-
-    - name: Show deployment status
+    - name: Show OpenClaw deployment status
       debug:
-        msg: >-
-          OpenClaw v{{ openclaw_install.stdout | default('') | regex_search('([0-9]+\.[0-9]+\.[0-9]+-[0-9]+)') | default('unknown') }} installed.
-          Run 'openclaw setup' interactively via SSH (ssh dincer@{{ ansible_host }}) to complete configuration,
-          then 'sudo systemctl enable --now openclaw' to start the gateway on port 18789.
-
-  handlers:
-    - name: reload systemd
-      systemd:
-        daemon_reload: yes
+        msg: "OpenClaw gateway running at http://{{ ansible_host }}:18789. Configure API key via: ssh dincer@{{ ansible_host }} 'openclaw configure'"
