@@ -67,6 +67,13 @@ resource "namecheap_domain_records" "halitdincer" {
   }
 
   record {
+    hostname = "proxmox"
+    type     = "A"
+    address  = "100.112.34.54"
+    ttl      = 1800
+  }
+
+  record {
     hostname = "www"
     type     = "CNAME"
     address  = "halitdincer.ddns.net."
