@@ -83,6 +83,9 @@ spec:
             - --data-dir=/atlantis-home
             - --port=4141
             - --write-git-creds
+          env:
+            - name: HOME
+              value: /home/atlantis
           envFrom:
             - secretRef:
                 name: atlantis-env
