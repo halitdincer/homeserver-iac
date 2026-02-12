@@ -81,6 +81,7 @@ spec:
             - --data-dir=/atlantis-home
             - --port=4141
             - --write-git-creds
+            - '--repo-config-json={"repos":[{"id":"/.*/","allowed_overrides":["workflow"],"allow_custom_workflows":true}]}'
           env:
             - name: HOME
               value: /home/atlantis
