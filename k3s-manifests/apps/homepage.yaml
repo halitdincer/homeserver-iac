@@ -148,6 +148,11 @@ data:
             icon: proxmox.png
             href: http://proxmox.halitdincer.com
             description: Hypervisor
+            widget:
+              type: proxmox
+              url: https://192.168.2.50:8006
+              username: "{{PROXMOX_TOKEN_ID}}"
+              password: "{{PROXMOX_TOKEN_SECRET}}"
         - K3s Cluster:
             icon: kubernetes.png
             description: Lightweight Kubernetes
