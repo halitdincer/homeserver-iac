@@ -81,6 +81,9 @@ data:
       Services:
         style: row
         columns: 3
+      Personal:
+        style: row
+        columns: 2
       Infrastructure:
         style: row
         columns: 4
@@ -107,10 +110,6 @@ data:
               type: homeassistant
               url: http://192.168.2.206:8123
               key: "{{HOMEPAGE_VAR_HA_TOKEN}}"
-        - Job Scout:
-            icon: mdi-briefcase-search
-            href: https://jobs.halitdincer.com
-            description: Job Board Tracker
         - Code Server:
             icon: vscode.png
             href: https://code.halitdincer.com
@@ -119,6 +118,12 @@ data:
             icon: gatus.png
             href: https://status.halitdincer.com
             description: Uptime Monitoring
+
+    - Personal:
+        - Job Scout:
+            icon: mdi-briefcase-search
+            href: https://jobs.halitdincer.com
+            description: Job Board Tracker
         - Lyra:
             icon: openai.png
             href: http://openclaw.halitdincer.com:18789
