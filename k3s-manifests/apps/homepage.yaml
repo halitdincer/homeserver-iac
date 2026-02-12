@@ -154,9 +154,6 @@ data:
               url: https://192.168.2.50:8006
               username: "{{HOMEPAGE_VAR_PROXMOX_TOKEN_ID}}"
               password: "{{HOMEPAGE_VAR_PROXMOX_TOKEN_SECRET}}"
-        - K3s Cluster:
-            icon: kubernetes.png
-            description: Lightweight Kubernetes
 
   widgets.yaml: |
     - kubernetes:
