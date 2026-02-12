@@ -108,7 +108,7 @@ data:
               url: http://192.168.2.206:8123
               key: "{{HOMEPAGE_VAR_HA_TOKEN}}"
         - Job Scout:
-            icon: briefcase.png
+            icon: mdi-briefcase-search
             href: https://jobs.halitdincer.com
             description: Job Board Tracker
         - Code Server:
@@ -126,7 +126,7 @@ data:
 
     - Infrastructure:
         - ArgoCD:
-            icon: argocd.png
+            icon: argo-cd.png
             href: https://argocd.halitdincer.com
             description: GitOps Deployments
         - Grafana:
@@ -154,6 +154,7 @@ data:
               url: https://192.168.2.50:8006
               username: "{{HOMEPAGE_VAR_PROXMOX_TOKEN_ID}}"
               password: "{{HOMEPAGE_VAR_PROXMOX_TOKEN_SECRET}}"
+              node: pve1
 
   widgets.yaml: |
     - kubernetes:
