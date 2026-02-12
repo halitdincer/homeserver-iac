@@ -97,7 +97,7 @@ data:
             widget:
               type: immich
               url: http://192.168.2.202:2283
-              key: "{{IMMICH_API_KEY}}"
+              key: "{{HOMEPAGE_VAR_IMMICH_API_KEY}}"
               version: 2
         - Home Assistant:
             icon: home-assistant.png
@@ -106,7 +106,7 @@ data:
             widget:
               type: homeassistant
               url: http://192.168.2.206:8123
-              key: "{{HA_TOKEN}}"
+              key: "{{HOMEPAGE_VAR_HA_TOKEN}}"
         - Job Scout:
             icon: briefcase.png
             href: https://jobs.halitdincer.com
@@ -152,8 +152,8 @@ data:
             widget:
               type: proxmox
               url: https://192.168.2.50:8006
-              username: "{{PROXMOX_TOKEN_ID}}"
-              password: "{{PROXMOX_TOKEN_SECRET}}"
+              username: "{{HOMEPAGE_VAR_PROXMOX_TOKEN_ID}}"
+              password: "{{HOMEPAGE_VAR_PROXMOX_TOKEN_SECRET}}"
         - K3s Cluster:
             icon: kubernetes.png
             description: Lightweight Kubernetes
