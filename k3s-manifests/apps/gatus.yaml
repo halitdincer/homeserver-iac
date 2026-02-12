@@ -131,7 +131,7 @@ spec:
     spec:
       containers:
         - name: gatus
-          image: ghcr.io/twin/gatus:v5
+          image: ghcr.io/twin/gatus:v5.34.0
           ports:
             - name: http
               containerPort: 8080
