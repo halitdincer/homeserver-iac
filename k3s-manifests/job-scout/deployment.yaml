@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: job-scout
+  namespace: job-scout
+  labels:
+    app: job-scout
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: job-scout
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: job-scout
+    spec:
+      serviceAccountName: job-scout
+      containers:
+        - name: job-scout
+          image: ghcr.io/halitdincer/job-scout:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "3000"
+            - name: DB_PATH
+              value: /data/jobscout.sqlite
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: job-scout-secret
+                  key: SESSION_SECRET
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: job-scout-secret
+                  key: ANTHROPIC_API_KEY
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: job-scout-data

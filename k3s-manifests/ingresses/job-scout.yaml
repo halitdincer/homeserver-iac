@@ -1,0 +1,27 @@
+# job-scout - Job Board Tracker
+# Domain: jobs.halitdincer.com
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: job-scout
+  namespace: job-scout
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: jobs.halitdincer.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: job-scout
+                port:
+                  number: 3000
+  tls:
+    - hosts:
+        - jobs.halitdincer.com
+      secretName: job-scout-tls

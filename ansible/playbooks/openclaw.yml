@@ -16,6 +16,22 @@
           - qemu-guest-agent
         state: present
 
+    # ── Tailscale VPN (Tailscale-only access, no K3s ingress) ──
+
+    - name: Check if Tailscale is installed
+      command: which tailscale
+      register: tailscale_check
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Install Tailscale
+      shell: curl -fsSL https://tailscale.com/install.sh | sh
+      when: tailscale_check.rc != 0
+
+    - name: Enable Tailscale SSH
+      command: tailscale set --ssh
+      changed_when: false
+
     - name: Start and enable QEMU guest agent
       systemd:
         name: qemu-guest-agent
@@ -59,6 +75,19 @@
       args:
         creates: /home/dincer/.openclaw/openclaw.json
 
+    - name: Get Tailscale IP
+      command: tailscale ip -4
+      register: tailscale_ip
+      changed_when: false
+      become: no
+
     - name: Show OpenClaw deployment status
       debug:
-        msg: "OpenClaw gateway running at http://{{ ansible_host }}:18789. Configure API key via: ssh dincer@{{ ansible_host }} 'openclaw configure'"
+        msg: >
+          OpenClaw gateways accessible via Tailscale only.
+          Lyra: http://openclaw.halitdincer.com:18789 (ws://localhost:18789 via SSH tunnel).
+          House: http://openclaw-house.halitdincer.com:18790 (ws://localhost:18790 via SSH tunnel).
+          Tailscale IP: {{ tailscale_ip.stdout }}.
+          SSH tunnel: ssh dincer@{{ tailscale_ip.stdout }} -L 18789:localhost:18789.
+          Tailscale SSH enabled (no keys needed).
+          Configure API key via: ssh dincer@{{ tailscale_ip.stdout }} 'openclaw configure'
