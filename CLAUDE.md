@@ -61,25 +61,57 @@ ansible/
 docs/                - Extended documentation (setup, operations, troubleshooting)
 ```
 
-## Key Commands
+## Terraform workflow — Atlantis (GitOps)
+
+**Do not run `terraform apply` locally.** All Terraform changes go through Atlantis.
+
+```
+Edit *.tf files → push to a branch → open PR
+  → Atlantis posts terraform plan as PR comment  (~30s)
+  → Review plan → merge PR
+  → Atlantis applies automatically
+```
+
+Atlantis URL: https://atlantis.halitdincer.com
+Webhook: `POST https://atlantis.halitdincer.com/events` (already configured on the repo)
+State file: persisted at `/atlantis-home/state/terraform.tfstate` in Atlantis PVC on K3s
+Config: `atlantis.yaml` at repo root
+
+**Rules for Terraform:**
+- **Never run `terraform apply` locally** — Atlantis owns apply
+- **Never run `terraform plan` and show output as if it's a deployment** — just push and let Atlantis plan
+- `terraform plan` locally is OK for quick iteration, but apply only via PR merge
+- Changes to `terraform/dns.tf` are rate-limited by Namecheap API — avoid plan/apply loops
+- Always push `*.tf` changes to a branch, not directly to `main`
+
+## Ansible commands (still manual)
 
 ```bash
-# Terraform - infrastructure changes
-cd terraform
-terraform plan                    # Preview changes (ALWAYS run first)
-terraform apply                   # Apply after review
-terraform show                    # Current state
-
-# Ansible - service deployment
 ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/all.yml
 ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/immich.yml
+ansible all -i ansible/inventory/hosts.yml -m ping  # connectivity check
+```
 
-# Check VM status via Proxmox
+## K3s / ArgoCD — GitOps for services
+
+ArgoCD manages `k3s-manifests/` directories. Changes to those files deploy automatically when pushed to `main`:
+
+| ArgoCD App | Watches | Deploys |
+|---|---|---|
+| `apps` | `k3s-manifests/apps/` | Service deployments (Atlantis, job-scout-image-updater, etc.) |
+| `ingresses` | `k3s-manifests/ingresses/` | All nginx ingress resources |
+| `infrastructure` | `k3s-manifests/infrastructure/` | nginx, cert-manager, ArgoCD Image Updater |
+
+**Rules for K3s:**
+- **Never** `kubectl apply` K3s resources directly — ArgoCD `selfHeal` will revert them
+- To change a service: edit `k3s-manifests/`, push to `main`, ArgoCD auto-syncs within ~3 min
+- To bootstrap a NEW ArgoCD Application: add YAML to `k3s-manifests/argocd-apps/` then `kubectl apply` it once
+
+## Check VM status
+
+```bash
 ssh root@192.168.2.50 "qm list"
 ssh root@192.168.2.50 "qm config 100"
-
-# Ansible connectivity test
-ansible all -i ansible/inventory/hosts.yml -m ping
 ```
 
 ## SSH Access
@@ -98,13 +130,15 @@ ansible all -i ansible/inventory/hosts.yml -m ping
 ## Rules
 
 - **Never commit secrets**: `terraform.tfvars`, `ansible.cfg`, `hosts.yml`, `*.pem`, `*.key` are gitignored
-- **Always `terraform plan` before `terraform apply`**: Show the plan to the user for approval
+- **Never run `terraform apply` locally** — all applies go through Atlantis via PR merge
+- **Never `kubectl apply` K3s resources directly** — ArgoCD selfHeal reverts manual changes
 - **Don't delete VMs or data** without explicit user confirmation
 - **Ansible vault** for sensitive data: `ansible-vault edit ansible/secrets.yml`
 - **All VMs use static IPs** configured inside the VM (not DHCP)
 - **Lifecycle ignores**: All VMs ignore changes to `network_device`, `disk`, and `started` in Terraform to avoid drift issues
-- When adding a new service: create VM in `terraform/vms.tf`, add to `ansible/inventory/hosts.yml`, create playbook in `ansible/playbooks/`
+- When adding a new VM/service: create in `terraform/vms.tf`, add to `ansible/inventory/hosts.yml`, create playbook in `ansible/playbooks/`, add K8s manifests in `k3s-manifests/`
 - **DNS changes**: Edit `terraform/dns.tf`. Namecheap API has rate limits — avoid frequent plan/apply cycles.
+- **Backend**: local state at `/atlantis-home/state/terraform.tfstate` (on Atlantis PVC). Do not change the backend type.
 
 ## Terraform Provider Details
 
@@ -112,5 +146,5 @@ ansible all -i ansible/inventory/hosts.yml -m ping
 - Provider: `namecheap/namecheap` v2.0 (resource type: `namecheap_domain_records`)
 - Auth: username/password via `terraform.tfvars` (root@pam for Proxmox, API key for Namecheap)
 - SSL: insecure mode (self-signed Proxmox cert)
-- Backend: local state file
+- Backend: local, state at `/atlantis-home/state/terraform.tfstate` (Atlantis PVC on K3s). Apply via Atlantis only.
 - All VMs: UEFI (OVMF), Q35 machine, virtio network, storage on `local-lvm`
