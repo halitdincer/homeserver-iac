@@ -64,7 +64,7 @@ data:
         columns: 3
       Infrastructure:
         style: row
-        columns: 3
+        columns: 4
 
   bookmarks.yaml: |
     []
@@ -85,12 +85,27 @@ data:
             widget:
               type: homeassistant
               url: http://192.168.2.206:8123
+    - Infrastructure:
         - ArgoCD:
             icon: argocd.png
             href: https://argocd.halitdincer.com
             description: GitOps Deployments
-
-    - Infrastructure:
+        - Grafana:
+            icon: grafana.png
+            href: https://grafana.halitdincer.com
+            description: Metrics Dashboards
+        - Prometheus:
+            icon: prometheus.png
+            href: https://prometheus.halitdincer.com
+            description: Metrics Collection
+        - Vault:
+            icon: vault.png
+            href: http://vault.halitdincer.com
+            description: Secrets Manager
+        - Atlantis:
+            icon: atlantis.png
+            href: https://atlantis.halitdincer.com
+            description: Terraform GitOps
         - Proxmox:
             icon: proxmox.png
             href: https://proxmox.halitdincer.com
