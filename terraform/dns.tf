@@ -36,6 +36,36 @@ resource "namecheap_domain_records" "halitdincer" {
     ttl      = 1800
   }
 
+  # ── Private K3s services - Tailscale-only access ──
+
+  record {
+    hostname = "argocd"
+    type     = "A"
+    address  = "100.112.34.54"
+    ttl      = 1800
+  }
+
+  record {
+    hostname = "grafana"
+    type     = "A"
+    address  = "100.112.34.54"
+    ttl      = 1800
+  }
+
+  record {
+    hostname = "prometheus"
+    type     = "A"
+    address  = "100.112.34.54"
+    ttl      = 1800
+  }
+
+  record {
+    hostname = "vault"
+    type     = "A"
+    address  = "100.112.34.54"
+    ttl      = 1800
+  }
+
   record {
     hostname = "www"
     type     = "CNAME"
