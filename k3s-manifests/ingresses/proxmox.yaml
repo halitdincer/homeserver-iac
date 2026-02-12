@@ -1,0 +1,50 @@
+---
+# Proxmox - Hypervisor Management UI
+# Domain: proxmox.halitdincer.com → Tailscale IP 100.112.34.54 (Tailscale-only)
+# No TLS certificate - Tailscale WireGuard provides encryption
+# nginx proxies HTTP → Proxmox HTTPS (self-signed, ssl-verify off)
+apiVersion: v1
+kind: Service
+metadata:
+  name: proxmox-external
+  namespace: default
+spec:
+  ports:
+  - port: 8006
+    protocol: TCP
+    targetPort: 8006
+
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: proxmox-external
+  namespace: default
+subsets:
+  - addresses:
+      - ip: 192.168.2.50
+    ports:
+      - port: 8006
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: proxmox
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/proxy-ssl-verify: "off"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: proxmox.halitdincer.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: proxmox-external
+                port:
+                  number: 8006

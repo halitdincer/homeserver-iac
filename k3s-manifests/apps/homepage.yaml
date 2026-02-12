@@ -48,6 +48,24 @@ subjects:
   namespace: default
 
 ---
+# Sync API keys from Vault → homepage-secret K8s Secret
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: homepage-secret
+  namespace: default
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: homepage-secret
+  dataFrom:
+    - extract:
+        key: secret/homepage/config
+
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -58,6 +76,7 @@ data:
     title: Halit's Homeserver
     favicon: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/home-assistant.png
     headerStyle: clean
+    disableSSLVerification: true
     layout:
       Services:
         style: row
@@ -78,6 +97,7 @@ data:
             widget:
               type: immich
               url: http://192.168.2.202:2283
+              key: "{{IMMICH_API_KEY}}"
         - Home Assistant:
             icon: home-assistant.png
             href: https://ha.halitdincer.com
@@ -85,6 +105,24 @@ data:
             widget:
               type: homeassistant
               url: http://192.168.2.206:8123
+              key: "{{HA_TOKEN}}"
+        - Job Scout:
+            icon: briefcase.png
+            href: https://jobs.halitdincer.com
+            description: Job Board Tracker
+        - Code Server:
+            icon: vscode.png
+            href: https://code.halitdincer.com
+            description: VS Code in Browser
+        - Status:
+            icon: gatus.png
+            href: https://status.halitdincer.com
+            description: Uptime Monitoring
+        - Lyra:
+            icon: openai.png
+            href: http://openclaw.halitdincer.com:18789
+            description: AI Assistant (Tailscale)
+
     - Infrastructure:
         - ArgoCD:
             icon: argocd.png
@@ -103,16 +141,13 @@ data:
             href: http://vault.halitdincer.com
             description: Secrets Manager
         - Atlantis:
-            icon: atlantis.png
+            icon: terraform.png
             href: https://atlantis.halitdincer.com
             description: Terraform GitOps
         - Proxmox:
             icon: proxmox.png
-            href: https://proxmox.halitdincer.com
+            href: http://proxmox.halitdincer.com
             description: Hypervisor
-            widget:
-              type: proxmox
-              url: https://192.168.2.50:8006
         - K3s Cluster:
             icon: kubernetes.png
             description: Lightweight Kubernetes
@@ -174,6 +209,9 @@ spec:
         env:
         - name: HOMEPAGE_ALLOWED_HOSTS
           value: "home.halitdincer.com"
+        envFrom:
+        - secretRef:
+            name: homepage-secret
         volumeMounts:
         - name: config
           mountPath: /app/config/settings.yaml
