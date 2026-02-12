@@ -5,12 +5,7 @@ kind: Application
 metadata:
   name: job-scout
   namespace: argocd
-  annotations:
-    # Track :latest by digest - triggers deploy when a new image is pushed
-    argocd-image-updater.argoproj.io/image-list: job-scout=ghcr.io/halitdincer/job-scout:latest
-    argocd-image-updater.argoproj.io/job-scout.update-strategy: digest
-    # argocd write-back: stores image override in the Application spec (no git commit needed)
-    argocd-image-updater.argoproj.io/write-back-method: argocd
+
 spec:
   project: default
   source:
