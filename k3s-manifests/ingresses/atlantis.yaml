@@ -1,0 +1,27 @@
+# Atlantis - Terraform GitOps server
+# Domain: atlantis.halitdincer.com
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: atlantis
+  namespace: atlantis
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: atlantis.halitdincer.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: atlantis
+                port:
+                  number: 4141
+  tls:
+    - hosts:
+        - atlantis.halitdincer.com
+      secretName: atlantis-tls

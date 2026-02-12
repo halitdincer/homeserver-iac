@@ -1,0 +1,28 @@
+version: 3
+
+# Atlantis configuration for homeserver-iac
+# Docs: https://www.runatlantis.io/docs/repo-level-atlantis-yaml.html
+
+projects:
+  - name: homeserver-iac
+    dir: terraform
+    workspace: default
+    autoplan:
+      enabled: true
+      when_modified:
+        - "*.tf"
+        - "*.tfvars"
+    workflow: persistent-state
+
+workflows:
+  persistent-state:
+    plan:
+      steps:
+        # Use absolute path for state so it persists in Atlantis PVC between runs
+        - init:
+            extra_args:
+              - "-backend-config=path=/atlantis-home/state/terraform.tfstate"
+        - plan
+    apply:
+      steps:
+        - apply

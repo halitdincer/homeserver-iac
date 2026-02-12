@@ -1,0 +1,132 @@
+# Atlantis - Terraform GitOps server
+# Domain: atlantis.halitdincer.com
+# Webhook: POST https://atlantis.halitdincer.com/events
+#
+# Before deploying, create the secret:
+#   kubectl create secret generic atlantis-env \
+#     --namespace atlantis \
+#     --from-literal=ATLANTIS_GH_TOKEN=<github-pat> \
+#     --from-literal=ATLANTIS_GH_WEBHOOK_SECRET=<webhook-secret> \
+#     --from-literal=TF_VAR_proxmox_password=<proxmox-password> \
+#     --from-literal=TF_VAR_proxmox_user=root@pam \
+#     --from-literal=TF_VAR_proxmox_api_url=https://192.168.2.50:8006/api2/json \
+#     --from-literal=TF_VAR_namecheap_user_name=<nc-username> \
+#     --from-literal=TF_VAR_namecheap_api_user=<nc-username> \
+#     --from-literal=TF_VAR_namecheap_api_key=<nc-api-key> \
+#     --from-literal=TF_VAR_ssh_public_key=<ssh-public-key> \
+#     --from-literal=TF_VAR_vm_default_password=<vm-password> \
+#     --from-literal=TF_VAR_storage_pool=local-lvm \
+#     --from-literal=TF_VAR_proxmox_node=pve1
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: atlantis
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: atlantis
+  namespace: atlantis
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: atlantis-home
+  namespace: atlantis
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: atlantis
+  namespace: atlantis
+  labels:
+    app: atlantis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: atlantis
+  serviceName: atlantis
+  template:
+    metadata:
+      labels:
+        app: atlantis
+    spec:
+      serviceAccountName: atlantis
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: atlantis
+          image: ghcr.io/runatlantis/atlantis:v0.31.0
+          args:
+            - server
+            - --atlantis-url=https://atlantis.halitdincer.com
+            - --gh-user=halitdincer
+            - --gh-token=$(ATLANTIS_GH_TOKEN)
+            - --gh-webhook-secret=$(ATLANTIS_GH_WEBHOOK_SECRET)
+            - --repo-allowlist=github.com/halitdincer/homeserver-iac
+            - --default-tf-version=1.5.7
+            - --data-dir=/atlantis-home
+            - --port=4141
+            - --write-git-creds
+          envFrom:
+            - secretRef:
+                name: atlantis-env
+          ports:
+            - name: http
+              containerPort: 4141
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 4141
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 4141
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: atlantis-home
+              mountPath: /atlantis-home
+      volumes:
+        - name: atlantis-home
+          persistentVolumeClaim:
+            claimName: atlantis-home
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: atlantis
+  namespace: atlantis
+spec:
+  selector:
+    app: atlantis
+  ports:
+    - name: http
+      port: 4141
+      targetPort: http
