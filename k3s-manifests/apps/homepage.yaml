@@ -164,10 +164,7 @@ data:
           showLabel: true
           label: "K3s Cluster"
         nodes:
-          show: true
-          cpu: true
-          memory: true
-          showLabel: true
+          show: false
 
     - datetime:
         text_size: xl
