@@ -65,10 +65,6 @@ spec:
         app: atlantis
     spec:
       serviceAccountName: atlantis
-      securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
       containers:
         - name: atlantis
           image: ghcr.io/runatlantis/atlantis:v0.31.0
