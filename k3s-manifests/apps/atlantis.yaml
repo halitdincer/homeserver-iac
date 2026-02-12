@@ -1,22 +1,24 @@
 # Atlantis - Terraform GitOps server
 # Domain: atlantis.halitdincer.com
 # Webhook: POST https://atlantis.halitdincer.com/events
-#
-# Before deploying, create the secret:
-#   kubectl create secret generic atlantis-env \
-#     --namespace atlantis \
-#     --from-literal=ATLANTIS_GH_TOKEN=<github-pat> \
-#     --from-literal=ATLANTIS_GH_WEBHOOK_SECRET=<webhook-secret> \
-#     --from-literal=TF_VAR_proxmox_password=<proxmox-password> \
-#     --from-literal=TF_VAR_proxmox_user=root@pam \
-#     --from-literal=TF_VAR_proxmox_api_url=https://192.168.2.50:8006/api2/json \
-#     --from-literal=TF_VAR_namecheap_user_name=<nc-username> \
-#     --from-literal=TF_VAR_namecheap_api_user=<nc-username> \
-#     --from-literal=TF_VAR_namecheap_api_key=<nc-api-key> \
-#     --from-literal=TF_VAR_ssh_public_key=<ssh-public-key> \
-#     --from-literal=TF_VAR_vm_default_password=<vm-password> \
-#     --from-literal=TF_VAR_storage_pool=local-lvm \
-#     --from-literal=TF_VAR_proxmox_node=pve1
+# Secrets managed via ExternalSecret (Vault path: secret/atlantis/config)
+
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: atlantis-env
+  namespace: atlantis
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: atlantis-env
+  dataFrom:
+    - extract:
+        key: secret/atlantis/config
 
 ---
 apiVersion: v1
