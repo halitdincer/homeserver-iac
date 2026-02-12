@@ -161,10 +161,16 @@ data:
           show: true
           cpu: true
           memory: true
+          nodes: true
+          pods: true
           showLabel: true
           label: "K3s Cluster"
         nodes:
-          show: false
+          show: true
+          cpu: true
+          memory: true
+          pods: true
+          showLabel: true
 
     - datetime:
         text_size: xl
