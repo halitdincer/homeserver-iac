@@ -98,6 +98,7 @@ data:
               type: immich
               url: http://192.168.2.202:2283
               key: "{{IMMICH_API_KEY}}"
+              version: 2
         - Home Assistant:
             icon: home-assistant.png
             href: https://ha.halitdincer.com
