@@ -3,6 +3,21 @@
 # Domain: proxmox.halitdincer.com → Tailscale IP 100.112.34.54 (Tailscale-only)
 # No TLS certificate - Tailscale WireGuard provides encryption
 # nginx proxies HTTP → Proxmox HTTPS (self-signed, ssl-verify off)
+#
+# NOTE: The Endpoints object (192.168.2.50:8006) is bootstrapped manually once:
+#   kubectl apply -f - <<'EOF'
+#   apiVersion: v1
+#   kind: Endpoints
+#   metadata:
+#     name: proxmox-external
+#     namespace: default
+#   subsets:
+#     - addresses:
+#         - ip: 192.168.2.50
+#       ports:
+#         - port: 8006
+#   EOF
+# ArgoCD excludes Endpoints/EndpointSlice cluster-wide so it cannot manage them.
 apiVersion: v1
 kind: Service
 metadata:
@@ -13,22 +28,6 @@ spec:
   - port: 8006
     protocol: TCP
     targetPort: 8006
-
----
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: proxmox-external
-  namespace: default
-  labels:
-    kubernetes.io/service-name: proxmox-external
-addressType: IPv4
-endpoints:
-  - addresses:
-      - "192.168.2.50"
-ports:
-  - port: 8006
-    protocol: TCP
 
 ---
 apiVersion: networking.k8s.io/v1
