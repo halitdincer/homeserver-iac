@@ -1,0 +1,21 @@
+---
+# Vault UI - Tailscale-only access (vault.halitdincer.com → Tailscale IP 100.112.34.54)
+# No TLS certificate - Tailscale WireGuard provides encryption
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vault
+  namespace: vault
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: vault.halitdincer.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: vault
+                port:
+                  number: 8200
