@@ -1,0 +1,57 @@
+---
+# TeslaMate - Tesla Data Logger
+# Domain: teslamate.halitdincer.com
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: teslamate
+  namespace: teslamate
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - teslamate.halitdincer.com
+    secretName: teslamate-tls
+  rules:
+  - host: teslamate.halitdincer.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: teslamate
+            port:
+              number: 4000
+
+---
+# TeslaMate Grafana Dashboards
+# Domain: teslamate-grafana.halitdincer.com
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: teslamate-grafana
+  namespace: teslamate
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - teslamate-grafana.halitdincer.com
+    secretName: teslamate-grafana-tls
+  rules:
+  - host: teslamate-grafana.halitdincer.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: teslamate-grafana
+            port:
+              number: 3000
