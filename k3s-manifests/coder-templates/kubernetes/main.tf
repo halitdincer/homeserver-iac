@@ -54,7 +54,7 @@ module "jetbrains-gateway" {
 resource "coder_app" "code-server" {
   agent_id     = coder_agent.main.id
   slug         = "code-server"
-  display_name = "VS Code"
+  display_name = "VS Code Web"
   url          = "http://localhost:13337/?folder=/home/coder"
   icon         = "/icon/code.svg"
   subdomain    = false
