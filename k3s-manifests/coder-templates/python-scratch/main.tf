@@ -24,18 +24,18 @@ resource "coder_agent" "main" {
     #!/bin/bash
     export PATH="/home/coder/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-    # Install Jupyter if not present
+    # Install JupyterLab and common data science packages
     if ! command -v jupyter > /dev/null 2>&1; then
-      pip3 install --user jupyterlab notebook ipython pandas numpy matplotlib requests 2>/dev/null
+      pip3 install --user jupyterlab notebook ipython pandas numpy matplotlib requests httpx 2>/dev/null
     fi
 
-    # Start JupyterLab
+    # Start JupyterLab (no auth for simplicity — workspace is owner-only)
     /home/coder/.local/bin/jupyter lab \
       --no-browser \
       --port=8888 \
       --ip=0.0.0.0 \
-      --NotebookApp.token='' \
-      --NotebookApp.password='' \
+      --ServerApp.token='' \
+      --ServerApp.password='' \
       --notebook-dir=/home/coder \
       >/tmp/jupyter.log 2>&1 &
 
@@ -74,18 +74,28 @@ resource "coder_app" "code-server" {
   share        = "owner"
 }
 
-# No PVC — ephemeral scratch workspace, data is lost on stop
+# Ephemeral — no PVC, data lost on stop. Intentional for scratch use.
 resource "kubernetes_deployment" "workspace" {
   metadata {
     name      = "coder-${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}-python"
     namespace = "coder"
-    labels    = { "coder.workspace" = data.coder_workspace.me.name }
+    labels = {
+      "coder.workspace" = data.coder_workspace.me.name
+    }
   }
   spec {
     replicas = data.coder_workspace.me.start_count
-    selector { match_labels = { "coder.workspace" = data.coder_workspace.me.name } }
+    selector {
+      match_labels = {
+        "coder.workspace" = data.coder_workspace.me.name
+      }
+    }
     template {
-      metadata { labels = { "coder.workspace" = data.coder_workspace.me.name } }
+      metadata {
+        labels = {
+          "coder.workspace" = data.coder_workspace.me.name
+        }
+      }
       spec {
         security_context {
           run_as_user = 1000
@@ -96,19 +106,31 @@ resource "kubernetes_deployment" "workspace" {
           image             = "codercom/enterprise-base:ubuntu"
           image_pull_policy = "Always"
           command           = ["/bin/bash", "-c", coder_agent.main.init_script]
-          security_context  { run_as_user = 1000 }
-
-          env { name = "CODER_AGENT_TOKEN" value = coder_agent.main.token }
+          security_context {
+            run_as_user = 1000
+          }
+          env {
+            name  = "CODER_AGENT_TOKEN"
+            value = coder_agent.main.token
+          }
           env {
             name = "ANTHROPIC_API_KEY"
             value_from {
-              secret_key_ref { name = "coder-secret" key = "ANTHROPIC_API_KEY" }
+              secret_key_ref {
+                name = "coder-secret"
+                key  = "ANTHROPIC_API_KEY"
+              }
             }
           }
-
           resources {
-            requests = { cpu = "250m", memory = "512Mi" }
-            limits   = { cpu = "2000m", memory = "2Gi" }
+            requests = {
+              cpu    = "250m"
+              memory = "512Mi"
+            }
+            limits = {
+              cpu    = "2000m"
+              memory = "2Gi"
+            }
           }
         }
       }

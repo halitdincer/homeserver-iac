@@ -72,7 +72,7 @@ resource "coder_agent" "main" {
 
     # Set up SSH key for homeserver VMs
     mkdir -p /home/coder/.ssh && chmod 700 /home/coder/.ssh
-    echo "$HOMESERVER_SSH_KEY" > /home/coder/.ssh/homeserver_ed25519
+    printf '%s' "$HOMESERVER_SSH_KEY" > /home/coder/.ssh/homeserver_ed25519
     chmod 600 /home/coder/.ssh/homeserver_ed25519
     cat >> /home/coder/.ssh/config << 'SSHCONF'
 Host homeserver-proxmox
@@ -142,7 +142,9 @@ resource "kubernetes_persistent_volume_claim" "home" {
     access_modes       = ["ReadWriteOnce"]
     storage_class_name = "local-path"
     resources {
-      requests = { storage = "10Gi" }
+      requests = {
+        storage = "10Gi"
+      }
     }
   }
 }
@@ -151,13 +153,23 @@ resource "kubernetes_deployment" "workspace" {
   metadata {
     name      = "coder-${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}-homeserver-iac"
     namespace = "coder"
-    labels    = { "coder.workspace" = data.coder_workspace.me.name }
+    labels = {
+      "coder.workspace" = data.coder_workspace.me.name
+    }
   }
   spec {
     replicas = data.coder_workspace.me.start_count
-    selector { match_labels = { "coder.workspace" = data.coder_workspace.me.name } }
+    selector {
+      match_labels = {
+        "coder.workspace" = data.coder_workspace.me.name
+      }
+    }
     template {
-      metadata { labels = { "coder.workspace" = data.coder_workspace.me.name } }
+      metadata {
+        labels = {
+          "coder.workspace" = data.coder_workspace.me.name
+        }
+      }
       spec {
         service_account_name = kubernetes_service_account.workspace.metadata[0].name
         security_context {
@@ -169,31 +181,51 @@ resource "kubernetes_deployment" "workspace" {
           image             = "codercom/enterprise-base:ubuntu"
           image_pull_policy = "Always"
           command           = ["/bin/bash", "-c", coder_agent.main.init_script]
-          security_context  { run_as_user = 1000 }
-
-          env { name = "CODER_AGENT_TOKEN" value = coder_agent.main.token }
+          security_context {
+            run_as_user = 1000
+          }
+          env {
+            name  = "CODER_AGENT_TOKEN"
+            value = coder_agent.main.token
+          }
           env {
             name = "HOMESERVER_SSH_KEY"
             value_from {
-              secret_key_ref { name = "homeserver-iac-secret" key = "HOMESERVER_SSH_KEY" }
+              secret_key_ref {
+                name = "homeserver-iac-secret"
+                key  = "HOMESERVER_SSH_KEY"
+              }
             }
           }
           env {
             name = "ANTHROPIC_API_KEY"
             value_from {
-              secret_key_ref { name = "homeserver-iac-secret" key = "ANTHROPIC_API_KEY" }
+              secret_key_ref {
+                name = "homeserver-iac-secret"
+                key  = "ANTHROPIC_API_KEY"
+              }
             }
           }
-
           resources {
-            requests = { cpu = "250m", memory = "512Mi" }
-            limits   = { cpu = "2000m", memory = "2Gi" }
+            requests = {
+              cpu    = "250m"
+              memory = "512Mi"
+            }
+            limits = {
+              cpu    = "2000m"
+              memory = "2Gi"
+            }
           }
-          volume_mount { mount_path = "/home/coder" name = "home" }
+          volume_mount {
+            mount_path = "/home/coder"
+            name       = "home"
+          }
         }
         volume {
           name = "home"
-          persistent_volume_claim { claim_name = kubernetes_persistent_volume_claim.home.metadata[0].name }
+          persistent_volume_claim {
+            claim_name = kubernetes_persistent_volume_claim.home.metadata[0].name
+          }
         }
       }
     }

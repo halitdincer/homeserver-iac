@@ -24,13 +24,16 @@ resource "coder_agent" "main" {
     #!/bin/bash
     export PATH="/home/coder/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-    # Install Node.js LTS if not present
+    # Install Node.js LTS via nvm if not present
     if ! command -v node > /dev/null 2>&1; then
-      curl -fsSL https://fnm.vercel.app/install | bash -s -- --install-dir /home/coder/.local/bin --skip-shell
-      /home/coder/.local/bin/fnm install --lts
-      /home/coder/.local/bin/fnm use lts-latest
-      # Add fnm shims to PATH
-      eval "$$(/home/coder/.local/bin/fnm env)"
+      curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+      export NVM_DIR="/home/coder/.nvm"
+      source "$NVM_DIR/nvm.sh"
+      nvm install --lts
+      nvm use --lts
+    else
+      export NVM_DIR="/home/coder/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
     fi
 
     # Clone repo if not already present
@@ -44,7 +47,7 @@ resource "coder_agent" "main" {
       npm install
     fi
 
-    # Start dev server
+    # Start dev server (background, output to log)
     npm run dev >/tmp/job-scout-dev.log 2>&1 &
 
     # Start code-server
@@ -89,8 +92,8 @@ resource "coder_app" "dev-server" {
   subdomain    = false
   share        = "owner"
   healthcheck {
-    url      = "http://localhost:3000/api/health"
-    interval = 10
+    url       = "http://localhost:3000/api/health"
+    interval  = 10
     threshold = 15
   }
 }
@@ -105,7 +108,9 @@ resource "kubernetes_persistent_volume_claim" "home" {
     access_modes       = ["ReadWriteOnce"]
     storage_class_name = "local-path"
     resources {
-      requests = { storage = "10Gi" }
+      requests = {
+        storage = "10Gi"
+      }
     }
   }
 }
@@ -114,13 +119,23 @@ resource "kubernetes_deployment" "workspace" {
   metadata {
     name      = "coder-${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}-job-scout"
     namespace = "coder"
-    labels    = { "coder.workspace" = data.coder_workspace.me.name }
+    labels = {
+      "coder.workspace" = data.coder_workspace.me.name
+    }
   }
   spec {
     replicas = data.coder_workspace.me.start_count
-    selector { match_labels = { "coder.workspace" = data.coder_workspace.me.name } }
+    selector {
+      match_labels = {
+        "coder.workspace" = data.coder_workspace.me.name
+      }
+    }
     template {
-      metadata { labels = { "coder.workspace" = data.coder_workspace.me.name } }
+      metadata {
+        labels = {
+          "coder.workspace" = data.coder_workspace.me.name
+        }
+      }
       spec {
         security_context {
           run_as_user = 1000
@@ -131,33 +146,59 @@ resource "kubernetes_deployment" "workspace" {
           image             = "codercom/enterprise-base:ubuntu"
           image_pull_policy = "Always"
           command           = ["/bin/bash", "-c", coder_agent.main.init_script]
-          security_context  { run_as_user = 1000 }
-
-          env { name = "CODER_AGENT_TOKEN" value = coder_agent.main.token }
-          env { name = "NODE_ENV"          value = "development" }
-          env { name = "DB_PATH"           value = "/home/coder/data/jobscout.sqlite" }
+          security_context {
+            run_as_user = 1000
+          }
+          env {
+            name  = "CODER_AGENT_TOKEN"
+            value = coder_agent.main.token
+          }
+          env {
+            name  = "NODE_ENV"
+            value = "development"
+          }
+          env {
+            name  = "DB_PATH"
+            value = "/home/coder/data/jobscout.sqlite"
+          }
           env {
             name = "ANTHROPIC_API_KEY"
             value_from {
-              secret_key_ref { name = "coder-secret" key = "ANTHROPIC_API_KEY" }
+              secret_key_ref {
+                name = "coder-secret"
+                key  = "ANTHROPIC_API_KEY"
+              }
             }
           }
           env {
             name = "SESSION_SECRET"
             value_from {
-              secret_key_ref { name = "job-scout-secret" key = "SESSION_SECRET" }
+              secret_key_ref {
+                name = "job-scout-secret"
+                key  = "SESSION_SECRET"
+              }
             }
           }
-
           resources {
-            requests = { cpu = "250m", memory = "512Mi" }
-            limits   = { cpu = "2000m", memory = "2Gi" }
+            requests = {
+              cpu    = "250m"
+              memory = "512Mi"
+            }
+            limits = {
+              cpu    = "2000m"
+              memory = "2Gi"
+            }
           }
-          volume_mount { mount_path = "/home/coder" name = "home" }
+          volume_mount {
+            mount_path = "/home/coder"
+            name       = "home"
+          }
         }
         volume {
           name = "home"
-          persistent_volume_claim { claim_name = kubernetes_persistent_volume_claim.home.metadata[0].name }
+          persistent_volume_claim {
+            claim_name = kubernetes_persistent_volume_claim.home.metadata[0].name
+          }
         }
       }
     }

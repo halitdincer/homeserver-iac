@@ -24,21 +24,16 @@ resource "coder_agent" "main" {
     #!/bin/bash
     export PATH="/home/coder/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-    # Install hass-cli
+    # Install hass-cli and httpie
     if ! command -v hass-cli > /dev/null 2>&1; then
-      pip3 install --user homeassistant-cli 2>/dev/null || true
+      pip3 install --user homeassistant-cli httpie 2>/dev/null || true
     fi
 
-    # Install httpie for quick HA REST API calls
-    if ! command -v http > /dev/null 2>&1; then
-      pip3 install --user httpie 2>/dev/null || true
-    fi
-
-    # Write a helper script for quick HA API calls
+    # Write ha-api helper for quick REST calls
     cat > /home/coder/.local/bin/ha-api << 'HAAPI'
 #!/bin/bash
 # Usage: ha-api GET /api/states
-# Usage: ha-api POST /api/services/light/turn_on '{"entity_id": "light.living_room"}'
+# Usage: ha-api POST /api/services/light/turn_on '{"entity_id":"light.x"}'
 METHOD=${1:-GET}
 ENDPOINT=${2:-/api/}
 DATA=${3:-}
@@ -46,7 +41,7 @@ curl -s -X "$METHOD" \
   -H "Authorization: Bearer $HA_TOKEN" \
   -H "Content-Type: application/json" \
   ${DATA:+-d "$DATA"} \
-  "${HA_URL}${ENDPOINT}" | python3 -m json.tool 2>/dev/null || true
+  "${HA_URL}${ENDPOINT}" | python3 -m json.tool 2>/dev/null
 HAAPI
     chmod +x /home/coder/.local/bin/ha-api
 
@@ -93,7 +88,9 @@ resource "kubernetes_persistent_volume_claim" "home" {
     access_modes       = ["ReadWriteOnce"]
     storage_class_name = "local-path"
     resources {
-      requests = { storage = "5Gi" }
+      requests = {
+        storage = "5Gi"
+      }
     }
   }
 }
@@ -102,13 +99,23 @@ resource "kubernetes_deployment" "workspace" {
   metadata {
     name      = "coder-${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}-ha"
     namespace = "coder"
-    labels    = { "coder.workspace" = data.coder_workspace.me.name }
+    labels = {
+      "coder.workspace" = data.coder_workspace.me.name
+    }
   }
   spec {
     replicas = data.coder_workspace.me.start_count
-    selector { match_labels = { "coder.workspace" = data.coder_workspace.me.name } }
+    selector {
+      match_labels = {
+        "coder.workspace" = data.coder_workspace.me.name
+      }
+    }
     template {
-      metadata { labels = { "coder.workspace" = data.coder_workspace.me.name } }
+      metadata {
+        labels = {
+          "coder.workspace" = data.coder_workspace.me.name
+        }
+      }
       spec {
         security_context {
           run_as_user = 1000
@@ -119,32 +126,55 @@ resource "kubernetes_deployment" "workspace" {
           image             = "codercom/enterprise-base:ubuntu"
           image_pull_policy = "Always"
           command           = ["/bin/bash", "-c", coder_agent.main.init_script]
-          security_context  { run_as_user = 1000 }
-
-          env { name = "CODER_AGENT_TOKEN" value = coder_agent.main.token }
-          env { name = "HA_URL"            value = "http://192.168.2.206:8123" }
+          security_context {
+            run_as_user = 1000
+          }
+          env {
+            name  = "CODER_AGENT_TOKEN"
+            value = coder_agent.main.token
+          }
+          env {
+            name  = "HA_URL"
+            value = "http://192.168.2.206:8123"
+          }
           env {
             name = "HA_TOKEN"
             value_from {
-              secret_key_ref { name = "home-assistant-secret" key = "HA_TOKEN" }
+              secret_key_ref {
+                name = "home-assistant-secret"
+                key  = "HA_TOKEN"
+              }
             }
           }
           env {
             name = "ANTHROPIC_API_KEY"
             value_from {
-              secret_key_ref { name = "home-assistant-secret" key = "ANTHROPIC_API_KEY" }
+              secret_key_ref {
+                name = "home-assistant-secret"
+                key  = "ANTHROPIC_API_KEY"
+              }
             }
           }
-
           resources {
-            requests = { cpu = "250m", memory = "256Mi" }
-            limits   = { cpu = "1000m", memory = "1Gi" }
+            requests = {
+              cpu    = "250m"
+              memory = "256Mi"
+            }
+            limits = {
+              cpu    = "1000m"
+              memory = "1Gi"
+            }
           }
-          volume_mount { mount_path = "/home/coder" name = "home" }
+          volume_mount {
+            mount_path = "/home/coder"
+            name       = "home"
+          }
         }
         volume {
           name = "home"
-          persistent_volume_claim { claim_name = kubernetes_persistent_volume_claim.home.metadata[0].name }
+          persistent_volume_claim {
+            claim_name = kubernetes_persistent_volume_claim.home.metadata[0].name
+          }
         }
       }
     }
