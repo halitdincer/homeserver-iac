@@ -25,9 +25,10 @@ resource "coder_agent" "main" {
   os             = "linux"
   startup_script = <<-EOF
     set -e
+    export PATH="$HOME/.local/bin:$PATH"
     # Install code-server if not present
     if ! command -v code-server > /dev/null 2>&1; then
-      curl -fsSL https://code-server.dev/install.sh | sh -s -- --method standalone --prefix=/home/coder/.local
+      curl -fsSL https://code-server.dev/install.sh | sh -s -- --method standalone --prefix="$HOME/.local"
     fi
     code-server --auth none --port 13337 &
     EOF
