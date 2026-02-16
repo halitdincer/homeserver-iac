@@ -43,6 +43,14 @@ module "claude-code" {
   workdir  = "/home/coder"
 }
 
+module "jetbrains-gateway" {
+  source   = "registry.coder.com/coder/jetbrains-gateway/coder"
+  version  = "1.2.5"
+  agent_id = coder_agent.main.id
+  folder   = "/home/coder"
+  latest   = true
+}
+
 resource "coder_app" "code-server" {
   agent_id     = coder_agent.main.id
   slug         = "code-server"
