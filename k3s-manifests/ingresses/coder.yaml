@@ -1,20 +1,20 @@
----
-# code-server - VS Code in the Browser
-# Domain: code.halitdincer.com
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: code-server
-  namespace: default
+  name: coder
+  namespace: coder
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "86400"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "86400"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
 spec:
   ingressClassName: nginx
   tls:
   - hosts:
     - code.halitdincer.com
-    secretName: code-server-tls
+    secretName: coder-tls
   rules:
   - host: code.halitdincer.com
     http:
@@ -23,6 +23,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: code-server
+            name: coder
             port:
-              number: 8080
+              number: 3000
