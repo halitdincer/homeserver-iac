@@ -34,14 +34,14 @@ resource "coder_agent" "main" {
 #!/bin/bash
 # Usage: ha-api GET /api/states
 # Usage: ha-api POST /api/services/light/turn_on '{"entity_id":"light.x"}'
-METHOD=${1:-GET}
-ENDPOINT=${2:-/api/}
-DATA=${3:-}
-curl -s -X "$METHOD" \
-  -H "Authorization: Bearer $HA_TOKEN" \
-  -H "Content-Type: application/json" \
-  ${DATA:+-d "$DATA"} \
-  "${HA_URL}${ENDPOINT}" | python3 -m json.tool 2>/dev/null
+METHOD=$${1:-GET}
+ENDPOINT=$${2:-/api/}
+DATA=$${3:-}
+if [ -n "$$DATA" ]; then
+  curl -s -X "$$METHOD" -H "Authorization: Bearer $$HA_TOKEN" -H "Content-Type: application/json" -d "$$DATA" "$$HA_URL$$ENDPOINT" | python3 -m json.tool 2>/dev/null
+else
+  curl -s -X "$$METHOD" -H "Authorization: Bearer $$HA_TOKEN" -H "Content-Type: application/json" "$$HA_URL$$ENDPOINT" | python3 -m json.tool 2>/dev/null
+fi
 HAAPI
     chmod +x /home/coder/.local/bin/ha-api
 
