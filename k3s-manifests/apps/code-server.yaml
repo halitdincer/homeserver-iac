@@ -52,6 +52,11 @@ spec:
             secretKeyRef:
               name: code-server-secret
               key: password
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: code-server-secret
+              key: ANTHROPIC_API_KEY
         volumeMounts:
         - name: data
           mountPath: /home/coder
