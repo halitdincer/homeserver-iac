@@ -2,7 +2,7 @@ terraform {
   required_providers {
     coder = {
       source  = "coder/coder"
-      version = "~> 1.0"
+      version = ">= 2.7.0"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
@@ -20,27 +20,26 @@ provider "kubernetes" {
 data "coder_workspace" "me" {}
 data "coder_workspace_owner" "me" {}
 
-# Claude Code module from Coder registry
-module "claude-code" {
-  source  = "registry.coder.com/modules/coder/claude-code/coder"
-  version = ">= 1.0.0"
-  agent_id = coder_agent.main.id
-  install_claude_code = true
-  claude_code_version = "latest"
-}
-
 resource "coder_agent" "main" {
   arch           = "amd64"
   os             = "linux"
   startup_script = <<-EOF
     set -e
-    # Start code-server
+    # Install code-server if not present
+    if ! command -v code-server > /dev/null 2>&1; then
+      curl -fsSL https://code-server.dev/install.sh | sh -s -- --method standalone --prefix=/home/coder/.local
+    fi
     code-server --auth none --port 13337 &
     EOF
+}
 
-  env = {
-    ANTHROPIC_API_KEY = "$ANTHROPIC_API_KEY"
-  }
+# Claude Code module — ANTHROPIC_API_KEY comes from the K8s secret injected
+# into the container environment; the module picks it up automatically.
+module "claude-code" {
+  source   = "registry.coder.com/coder/claude-code/coder"
+  version  = "3.4.3"
+  agent_id = coder_agent.main.id
+  workdir  = "/home/coder"
 }
 
 resource "coder_app" "code-server" {
@@ -58,8 +57,8 @@ resource "kubernetes_persistent_volume_claim" "home" {
     name      = "coder-${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}-home"
     namespace = "coder"
     labels = {
-      "app.kubernetes.io/name"     = "coder-pvc"
-      "app.kubernetes.io/part-of"  = "coder"
+      "app.kubernetes.io/name"    = "coder-pvc"
+      "app.kubernetes.io/part-of" = "coder"
     }
   }
   wait_until_bound = false
@@ -79,8 +78,8 @@ resource "kubernetes_deployment" "workspace" {
     name      = "coder-${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}"
     namespace = "coder"
     labels = {
-      "app.kubernetes.io/name"     = "coder-workspace"
-      "app.kubernetes.io/part-of"  = "coder"
+      "app.kubernetes.io/name"    = "coder-workspace"
+      "app.kubernetes.io/part-of" = "coder"
     }
   }
   spec {
@@ -117,6 +116,7 @@ resource "kubernetes_deployment" "workspace" {
             name  = "CODER_AGENT_TOKEN"
             value = coder_agent.main.token
           }
+          # ANTHROPIC_API_KEY injected from Vault-backed K8s secret
           env {
             name = "ANTHROPIC_API_KEY"
             value_from {
@@ -147,7 +147,7 @@ resource "kubernetes_deployment" "workspace" {
         volume {
           name = "home"
           persistent_volume_claim {
-            claim_name = kubernetes_persistent_volume_claim.home.metadata.0.name
+            claim_name = kubernetes_persistent_volume_claim.home.metadata[0].name
           }
         }
       }
