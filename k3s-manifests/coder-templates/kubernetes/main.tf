@@ -30,7 +30,7 @@ resource "coder_agent" "main" {
     if [ ! -f /home/coder/.local/bin/code-server ]; then
       curl -fsSL https://code-server.dev/install.sh | sh -s -- --method standalone --prefix=/home/coder/.local
     fi
-    /home/coder/.local/bin/code-server --auth none --port 13337 &
+    /home/coder/.local/bin/code-server --auth none --port 13337 >/tmp/code-server.log 2>&1 &
     EOF
 }
 
