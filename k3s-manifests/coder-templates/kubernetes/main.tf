@@ -24,13 +24,13 @@ resource "coder_agent" "main" {
   arch           = "amd64"
   os             = "linux"
   startup_script = <<-EOF
-    set -e
-    export PATH="$HOME/.local/bin:$PATH"
-    # Install code-server if not present
-    if ! command -v code-server > /dev/null 2>&1; then
-      curl -fsSL https://code-server.dev/install.sh | sh -s -- --method standalone --prefix="$HOME/.local"
+    #!/bin/bash
+    export PATH="/home/coder/.local/bin:$$PATH"
+    # Install code-server if not already present
+    if [ ! -f /home/coder/.local/bin/code-server ]; then
+      curl -fsSL https://code-server.dev/install.sh | sh -s -- --method standalone --prefix=/home/coder/.local
     fi
-    code-server --auth none --port 13337 &
+    /home/coder/.local/bin/code-server --auth none --port 13337 &
     EOF
 }
 
