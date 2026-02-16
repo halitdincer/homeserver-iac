@@ -20,6 +20,13 @@ spec:
                 secretKeyRef:
                   name: coder-secret
                   key: CODER_POSTGRESQL_CONNECTION_URL
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
           service:
             type: ClusterIP
   destination:
