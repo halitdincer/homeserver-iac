@@ -146,12 +146,12 @@ resource "proxmox_virtual_environment_vm" "k3s" {
   on_boot     = true
 
   cpu {
-    cores = 2
+    cores = 4
     type  = "host"
   }
 
   memory {
-    dedicated = 4096  # 4GB
+    dedicated = 8192  # 8GB
   }
 
   bios = "ovmf"
