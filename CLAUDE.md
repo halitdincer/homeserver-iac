@@ -146,7 +146,11 @@ kubectl port-forward -n vault vault-0 8200:8200
 # open http://localhost:8200  (token from password manager)
 ```
 
-**⚠️ Vault is sealed after every restart.** Unseal with 2 of 3 keys from password manager:
+**Vault auto-unseals automatically** via the `vault-unsealer` deployment (`k3s-manifests/apps/vault-unsealer.yaml`). It polls every 30s and runs unseal when needed. No manual intervention required after restarts.
+
+The unseal keys are stored as a SealedSecret in git (encrypted with the cluster's sealed-secrets public key). To reseal/rotate: update the SealedSecret and redeploy.
+
+Manual unseal (if unsealer is down):
 ```bash
 kubectl exec -n vault vault-0 -- vault operator unseal <KEY1>
 kubectl exec -n vault vault-0 -- vault operator unseal <KEY2>
@@ -154,26 +158,20 @@ kubectl exec -n vault vault-0 -- vault operator unseal <KEY2>
 
 ## Power outage / full cluster restart recovery
 
-After an unplanned restart (power cut, etc.) run through this checklist:
+After an unplanned restart (power cut, etc.) Vault unseals automatically within ~30s. If other components still fail:
 
-1. **Unseal Vault** — always seals on restart:
-   ```bash
-   kubectl exec -n vault vault-0 -- vault operator unseal <KEY1>
-   kubectl exec -n vault vault-0 -- vault operator unseal <KEY2>
-   ```
-
-2. **Restart ArgoCD** — repo-server often fails to reconnect after abrupt shutdown:
+1. **Restart ArgoCD** — repo-server often fails to reconnect after abrupt shutdown:
    ```bash
    kubectl rollout restart deployment argocd-repo-server argocd-server \
      argocd-applicationset-controller argocd-notifications-controller -n argocd
    ```
 
-3. **Restart external-secrets operator** — caches the "sealed" Vault state and won't recover on its own:
+2. **Restart external-secrets operator** — caches the "sealed" Vault state and won't recover on its own:
    ```bash
    kubectl rollout restart deployment -n external-secrets
    ```
 
-4. **Verify** — all apps should reach `Synced` + `Healthy` within ~2 min:
+3. **Verify** — all apps should reach `Synced` + `Healthy` within ~2 min:
    ```bash
    kubectl get applications -n argocd -o wide
    kubectl get externalsecret --all-namespaces
@@ -222,6 +220,8 @@ Key in use: `~/.ssh/id_ed25519` (the MacBook's primary key — added to all serv
 - **Lifecycle ignores**: All VMs ignore changes to `network_device`, `disk`, and `started` in Terraform to avoid drift issues
 - When adding a new VM/service: create in `terraform/vms.tf`, add to `ansible/inventory/hosts.yml`, create playbook in `ansible/playbooks/`, add K8s manifests in `k3s-manifests/`
 - **DNS changes**: Edit `terraform/dns.tf`. Namecheap API has rate limits — avoid frequent plan/apply cycles.
+- **Namecheap API IP whitelist**: The Atlantis pod's outbound IP must be whitelisted at namecheap.com → Profile → Tools → API Access. If your home IP changes (e.g. after a power outage), Atlantis `terraform plan` will fail with `Invalid request IP`. Add the new IP to the whitelist to unblock. Consider migrating to Cloudflare to eliminate this permanently.
+- **K3s VM resources**: 4 cores / 8GB RAM (bumped from 2/4 on 2026-02-19 — node was at 100% CPU/memory requests causing pods to fail scheduling after rolling updates).
 - **Backend**: local state at `/atlantis-home/state/terraform.tfstate` (on Atlantis PVC). Do not change the backend type.
 
 ## Terraform Provider Details
