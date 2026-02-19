@@ -1,0 +1,27 @@
+# flight-tracker - Minimal Live Flight Tracker
+# Domain: flights.halitdincer.com
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flight-tracker
+  namespace: flight-tracker
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: flights.halitdincer.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: flight-tracker
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - flights.halitdincer.com
+      secretName: flight-tracker-tls

@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flight-tracker
+  namespace: flight-tracker
+  labels:
+    app: flight-tracker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flight-tracker
+  template:
+    metadata:
+      labels:
+        app: flight-tracker
+    spec:
+      containers:
+        - name: flight-tracker
+          image: ghcr.io/halitdincer/minimal-live-flight-tracker:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
