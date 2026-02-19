@@ -124,6 +124,10 @@ data:
             icon: mdi-briefcase-search
             href: https://jobs.halitdincer.com
             description: Job Board Tracker
+        - Flight Tracker:
+            icon: mdi-airplane
+            href: https://flights.halitdincer.com
+            description: Live Flight Map
         - Lyra:
             icon: openai.png
             href: http://openclaw.halitdincer.com:18789

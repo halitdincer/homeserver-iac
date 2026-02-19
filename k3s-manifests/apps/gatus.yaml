@@ -51,6 +51,13 @@ data:
         conditions:
           - "[STATUS] == 200"
 
+      - name: Flight Tracker
+        group: Public
+        url: https://flights.halitdincer.com
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
       # ── K3s Infrastructure ──
       - name: ArgoCD
         group: K3s
