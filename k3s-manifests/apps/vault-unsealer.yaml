@@ -1,0 +1,69 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: vault-unseal-keys
+  namespace: vault
+spec:
+  encryptedData:
+    key1: AgAjxGG6QdL56KNwYcPjZ+QjNh4xVLXCUxld2d58Ym6qdIIxLVDZGG9IO0mPYplJO4cf1bWiIunb8aYkunLUFdSCuSY7pccijyjRJGaRnA5orjC1OtPAHFmA1BbXQWH8+Ffa+uiX7BGYmUpdmL1Yr9uZV7WkhSf5EGx+HUBEVQxoGnO6BoU/wtOHZ7ADX+4Lx7qoTnXwa9lYDwqDiODtj3V3znPYe0t6yqSGLSMRTSfTxMqWLbwxsngIf6grf+NJo8k0QTBjyFIL5YdKnDJO1mannDFIC+0vwoJqimGDZ1WuOdSr3Vx/icXVaF2EliZJDE0+AnF4xEQr6SfnjCon7R1poIQ6g281FaR6mzxK5QBI5xekbfQzLU1msKSyOUJwz8I/a3ueg1Y7pB0+G7l8hfDRs1HGhyajyvZC91quklRwbYqx/I0UjD2qyGMJKphcplRZHHW2k+VlcZYIhAWyP96UV1byeiSCuZ1muz04GfuD0LzhelD1m7/LlRW4etHREYSlvTGOwA6xzAPZJaF5+BAUdfCzzJA5YQjdsXrnC98UVvyC+CwxfDtppG5K7PTO4yDy82A+W3XW9hH5t1thI+b9bp2aj/vIwQ6Ir7ux3cdngs2OXE1te1p0tBF/Sq6QFOMQgDjD4XE32miaaliILckgHkgiwX/hWTX3nS+7t9uAzrAhwy/wv5jZtc8+PJ4a7SofIdP9bNl16p4kCBbTQ+6f9uS7Rou0VKMqO9w7Z+S7NI22c/j0Kqmb3CsJDA==
+    key2: AgC1v6uGBjxMJteMlNiSQdemylcxDjZLpit3D7MaBLyYcFrACPNC66M2mXRwuWRZHl9ns3KbkmDhOyPocYS5hl/x0buLXCjg8ySCQFeNYJhRvDCcnaDFoEFB5LZeR3Wx+XBiyg32XGOlv9UHCqRZhdy732+5qtwmZKlozzqbE0IOGAGrjWEw9/5DanFwnIsketuiPAicRnFbkCoE4PQ7LeKZQQFY9E2Qx50wC0U/gjYkPMJ+CA/iq0nFxRQQXMhD1/HGgBQq0lGQeGMJzzykjQUBrXDJhTw7qGm6+RXJQQHEfFjLiD2jbfxVwckgmzVeovuJ/TcNHVjtwmnQRg1qZZwWOlL7vIhP8ay0+MTi5ifH1TDmKxFOjuxXw2ScurYNXY7d8yNnAeJbVu2YWo8sRHG02zlUZSqEVdDtWR+qNWc5MBaeaCeM6hdbAM6RUQNCPGJWpiOcVZ9HYrsZ356/lZeA9OVJA9x/n+p75c8rKF3bmlfIRMukkr8eNkz+2y4kF65pzYGiXOH/KGgpDQCkTLGSUOn64kfaQc99lQu1hIYWMhKDTx5HLjRNg5Ml53Ulb2qXMAagE1ugxha4GLQnQ2Q+0wgeb3pTD1vKGLIUCfb3ly6BCP1sb0kZW+isD6q3n2ZH15EPsrGPtd7XjXcGaQH8RtQudIcOQZHHGJFov/ATkEFpsLPN8CJ7xd34tjQm5E1V4nZ/JNb8lCw1IVoh2tAByJaXl7yrW6g7RnLhS3eD1N8rkEWhIbft4vyDVg==
+  template:
+    metadata:
+      name: vault-unseal-keys
+      namespace: vault
+    type: Opaque
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vault-unsealer
+  namespace: vault
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault-unsealer
+  template:
+    metadata:
+      labels:
+        app: vault-unsealer
+    spec:
+      containers:
+        - name: unsealer
+          image: hashicorp/vault:1.18.1
+          command:
+            - /bin/sh
+            - -c
+            - |
+              while true; do
+                EXIT_CODE=0
+                vault status > /dev/null 2>&1 || EXIT_CODE=$?
+                if [ "$EXIT_CODE" -eq 2 ]; then
+                  echo "$(date) Vault is sealed — unsealing..."
+                  vault operator unseal "$KEY1"
+                  vault operator unseal "$KEY2"
+                  echo "$(date) Unseal commands sent"
+                fi
+                sleep 30
+              done
+          env:
+            - name: VAULT_ADDR
+              value: http://vault.vault.svc.cluster.local:8200
+            - name: KEY1
+              valueFrom:
+                secretKeyRef:
+                  name: vault-unseal-keys
+                  key: key1
+            - name: KEY2
+              valueFrom:
+                secretKeyRef:
+                  name: vault-unseal-keys
+                  key: key2
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
