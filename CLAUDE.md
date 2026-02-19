@@ -152,6 +152,33 @@ kubectl exec -n vault vault-0 -- vault operator unseal <KEY1>
 kubectl exec -n vault vault-0 -- vault operator unseal <KEY2>
 ```
 
+## Power outage / full cluster restart recovery
+
+After an unplanned restart (power cut, etc.) run through this checklist:
+
+1. **Unseal Vault** — always seals on restart:
+   ```bash
+   kubectl exec -n vault vault-0 -- vault operator unseal <KEY1>
+   kubectl exec -n vault vault-0 -- vault operator unseal <KEY2>
+   ```
+
+2. **Restart ArgoCD** — repo-server often fails to reconnect after abrupt shutdown:
+   ```bash
+   kubectl rollout restart deployment argocd-repo-server argocd-server \
+     argocd-applicationset-controller argocd-notifications-controller -n argocd
+   ```
+
+3. **Restart external-secrets operator** — caches the "sealed" Vault state and won't recover on its own:
+   ```bash
+   kubectl rollout restart deployment -n external-secrets
+   ```
+
+4. **Verify** — all apps should reach `Synced` + `Healthy` within ~2 min:
+   ```bash
+   kubectl get applications -n argocd -o wide
+   kubectl get externalsecret --all-namespaces
+   ```
+
 **Do NOT use SealedSecrets or `kubectl create secret` for new app secrets** — use Vault + ExternalSecret instead.
 
 ## Check VM status
@@ -163,17 +190,20 @@ ssh root@192.168.2.50 "qm config 100"
 
 ## SSH Access
 
-SSH aliases are configured in `~/.ssh/config` (key: `~/.ssh/homeserver_ed25519`):
+Key in use: `~/.ssh/id_ed25519` (the MacBook's primary key — added to all servers via `curl https://github.com/halitdincer.keys >> ~/.ssh/authorized_keys`).
 
-| Host alias | Raw SSH | Notes |
+> **Note:** The old `~/.ssh/homeserver_ed25519` key no longer exists on new machines. Use `id_ed25519` instead.
+
+| Host | SSH command | Notes |
 |---|---|---|
-| `ssh homeserver-proxmox` | `ssh root@192.168.2.50` | Proxmox host |
-| `ssh homeserver-immich` | `ssh root@192.168.2.202` | Immich VM |
-| `ssh homeserver-k3s` | `ssh root@192.168.2.216` | K3s VM |
-| `ssh homeserver-openclaw` | `ssh dincer@192.168.2.208` | OpenClaw (LAN, key-based) |
-| `ssh homeserver-openclaw-ts` | `ssh dincer@100.82.144.118` | OpenClaw (Tailscale SSH, no keys) |
+| Proxmox | `ssh -i ~/.ssh/id_ed25519 root@192.168.2.50` | Proxmox host |
+| Immich VM | `ssh -i ~/.ssh/id_ed25519 root@192.168.2.202` | Immich VM |
+| K3s VM | `ssh -i ~/.ssh/id_ed25519 root@192.168.2.216` | K3s VM (primary) |
+| OpenClaw (LAN) | `ssh -i ~/.ssh/id_ed25519 dincer@192.168.2.208` | OpenClaw |
+| OpenClaw (Tailscale) | `ssh dincer@100.82.144.118` | OpenClaw (Tailscale SSH, no keys needed) |
 
 - **Home Assistant (VM 103)**: No SSH. HAOS only — use REST API at port 8123
+- **Adding key to a new server**: `curl https://github.com/halitdincer.keys >> ~/.ssh/authorized_keys` (or `>> /root/.ssh/authorized_keys` for root)
 
 ## USB Passthrough
 
