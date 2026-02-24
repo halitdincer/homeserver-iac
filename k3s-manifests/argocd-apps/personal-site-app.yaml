@@ -1,0 +1,23 @@
+# ArgoCD Application for personal-site
+# Deploys the personal website at www.halitdincer.com
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: personal-site
+  namespace: argocd
+
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:halitdincer/homeserver-iac.git
+    targetRevision: main
+    path: k3s-manifests/personal-site
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: personal-site
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
