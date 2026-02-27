@@ -62,6 +62,7 @@ resource "proxmox_virtual_environment_vm" "immich" {
   }
 
   lifecycle {
+    prevent_destroy = true
     ignore_changes = [
       network_device,
       disk,
@@ -128,6 +129,7 @@ resource "proxmox_virtual_environment_vm" "home_assistant" {
   }
 
   lifecycle {
+    prevent_destroy = true
     ignore_changes = [
       network_device,
       disk,
@@ -187,6 +189,7 @@ resource "proxmox_virtual_environment_vm" "k3s" {
   }
 
   lifecycle {
+    prevent_destroy = true
     ignore_changes = [
       network_device,
       disk,
@@ -264,6 +267,7 @@ resource "proxmox_virtual_environment_vm" "openclaw" {
   }
 
   lifecycle {
+    prevent_destroy = true
     ignore_changes = [
       network_device,
       disk,

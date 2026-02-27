@@ -22,6 +22,8 @@ workflows:
         - init:
             extra_args:
               - "-backend-config=path=/atlantis-home/state/terraform.tfstate"
+        - run: terraform validate
+        - run: terraform test -test-directory=tests
         - plan
     apply:
       steps:
