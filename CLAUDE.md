@@ -8,7 +8,7 @@ Proxmox VE 9.1.1 on Dell OptiPlex (192.168.2.50). Managed via Terraform (VMs + D
 |------|----|---------|-----|
 | 100 | 192.168.2.202 | Immich (photos) | photos.halitdincer.com |
 | 103 | 192.168.2.206 | Home Assistant OS | ha.halitdincer.com |
-| 104 | 192.168.2.208 | OpenClaw (AI, Tailscale-only) | openclaw.halitdincer.com |
+| 106 | 192.168.2.209 | devbox (AI coding agents) | devbox.halitdincer.com |
 | 105 | 192.168.2.216 | K3s (ingress + all services) | argocd.halitdincer.com |
 
 VM 103: no SSH — HAOS only, use REST API at port 8123.
@@ -73,8 +73,7 @@ See `docs/SECRETS.md` for paths table, read/write commands, and how to add a new
 | Proxmox | `ssh -i ~/.ssh/id_ed25519 root@192.168.2.50` |
 | K3s VM | `ssh -i ~/.ssh/id_ed25519 root@192.168.2.216` |
 | Immich VM | `ssh -i ~/.ssh/id_ed25519 root@192.168.2.202` |
-| OpenClaw (LAN) | `ssh -i ~/.ssh/id_ed25519 dincer@192.168.2.208` |
-| OpenClaw (Tailscale) | `ssh dincer@100.82.144.118` |
+| devbox | `ssh -i ~/.ssh/id_ed25519 dincer@192.168.2.209` |
 
 ## Post-Outage Recovery
 
