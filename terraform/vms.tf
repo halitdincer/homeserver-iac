@@ -62,6 +62,7 @@ resource "proxmox_virtual_environment_vm" "immich" {
   }
 
   lifecycle {
+    prevent_destroy = true
     ignore_changes = [
       network_device,
       disk,
@@ -128,6 +129,7 @@ resource "proxmox_virtual_environment_vm" "home_assistant" {
   }
 
   lifecycle {
+    prevent_destroy = true
     ignore_changes = [
       network_device,
       disk,
@@ -187,6 +189,7 @@ resource "proxmox_virtual_environment_vm" "k3s" {
   }
 
   lifecycle {
+    prevent_destroy = true
     ignore_changes = [
       network_device,
       disk,
@@ -195,25 +198,25 @@ resource "proxmox_virtual_environment_vm" "k3s" {
   }
 }
 
-# VM 104: OpenClaw - Personal AI Assistant
-resource "proxmox_virtual_environment_vm" "openclaw" {
-  name        = "openclaw"
-  description = "OpenClaw - Personal AI assistant"
+# VM 106: devbox - AI Coding Agents Environment
+resource "proxmox_virtual_environment_vm" "devbox" {
+  name        = "devbox"
+  description = "devbox - AI coding agents environment"
   node_name   = var.proxmox_node
-  vm_id       = 104
+  vm_id       = 106
   on_boot     = true
 
   cpu {
-    cores = 2
+    cores = 4
     type  = "host"
   }
 
   memory {
-    dedicated = 2048  # 2GB
+    dedicated = 4096  # 4GB
   }
 
-  bios = "ovmf"
-  machine = "q35"
+  bios          = "ovmf"
+  machine       = "q35"
   scsi_hardware = "virtio-scsi-single"
 
   agent {
@@ -229,7 +232,7 @@ resource "proxmox_virtual_environment_vm" "openclaw" {
     datastore_id = var.storage_pool
     interface    = "scsi0"
     iothread     = true
-    size         = 20
+    size         = 30
     file_id      = proxmox_virtual_environment_download_file.ubuntu_cloud_image.id
   }
 
@@ -247,7 +250,7 @@ resource "proxmox_virtual_environment_vm" "openclaw" {
   initialization {
     ip_config {
       ipv4 {
-        address = "192.168.2.208/24"
+        address = "192.168.2.209/24"
         gateway = var.network_gateway
       }
     }
@@ -264,6 +267,7 @@ resource "proxmox_virtual_environment_vm" "openclaw" {
   }
 
   lifecycle {
+    prevent_destroy = true
     ignore_changes = [
       network_device,
       disk,

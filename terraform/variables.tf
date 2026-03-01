@@ -18,21 +18,6 @@ variable "proxmox_password" {
   sensitive   = true
 }
 
-# Optional: API Token (not currently used)
-variable "proxmox_token_id" {
-  description = "Proxmox API token ID"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
-variable "proxmox_token_secret" {
-  description = "Proxmox API token secret"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
 variable "proxmox_node" {
   description = "Proxmox node name"
   type        = string

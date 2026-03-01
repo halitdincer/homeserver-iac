@@ -2,9 +2,9 @@
 # DO NOT commit terraform.tfvars to git!
 
 # Proxmox API credentials
-proxmox_api_url          = "https://192.168.2.50:8006/api2/json"
-proxmox_token_id         = "root@pam!terraform"
-proxmox_token_secret     = "your-secret-token-here"
+proxmox_api_url  = "https://192.168.2.50:8006/api2/json"
+proxmox_user     = "root@pam"
+proxmox_password = "your-proxmox-root-password"
 
 # Proxmox node
 proxmox_node = "pve1"

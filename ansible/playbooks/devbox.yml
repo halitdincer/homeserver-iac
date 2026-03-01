@@ -1,0 +1,95 @@
+---
+- name: Configure devbox VM
+  hosts: devbox
+  become: yes
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install base packages
+      apt:
+        name:
+          - curl
+          - git
+          - tmux
+          - neovim
+          - ripgrep
+          - fzf
+          - build-essential
+          - python3
+          - python3-pip
+          - qemu-guest-agent
+        state: present
+
+    - name: Install Node.js LTS (via NodeSource)
+      shell: |
+        curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+        apt-get install -y nodejs
+      args:
+        creates: /usr/bin/node
+
+    - name: Install Claude Code CLI
+      community.general.npm:
+        name: "@anthropic-ai/claude-code"
+        global: yes
+      args:
+        creates: /usr/local/bin/claude
+
+    - name: Install OpenAI Codex CLI
+      community.general.npm:
+        name: "@openai/codex"
+        global: yes
+      args:
+        creates: /usr/local/bin/codex
+
+    # ── Tailscale VPN ──
+
+    - name: Check if Tailscale is installed
+      command: which tailscale
+      register: tailscale_check
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Install Tailscale
+      shell: curl -fsSL https://tailscale.com/install.sh | sh
+      when: tailscale_check.rc != 0
+
+    - name: Enable Tailscale SSH
+      command: tailscale set --ssh
+      changed_when: false
+
+    - name: Start and enable QEMU guest agent
+      systemd:
+        name: qemu-guest-agent
+        state: started
+        enabled: yes
+
+    - name: Ensure 4 GB swap file exists
+      shell: |
+        if [ ! -f /swapfile ]; then
+          fallocate -l 4G /swapfile
+          chmod 600 /swapfile
+          mkswap /swapfile
+          swapon /swapfile
+          echo '/swapfile none swap sw 0 0' >> /etc/fstab
+        fi
+      args:
+        creates: /swapfile
+
+    - name: Clone dotfiles for user dincer
+      git:
+        repo: https://github.com/halitdincer/dotfiles.git
+        dest: /home/dincer/Developers/dotfiles
+        version: main
+      become: no
+
+    - name: Show devbox deployment status
+      debug:
+        msg: >
+          devbox provisioned at 192.168.2.209.
+          Next: SSH in, run `sudo tailscale up --auth-key=<key>`,
+          get IP with `tailscale ip -4`, then update DNS in a follow-up PR.
+          SSH: dincer@192.168.2.209 or via Tailscale once registered.
