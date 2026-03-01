@@ -32,8 +32,8 @@ run "vm_ids_are_fixed" {
   }
 
   assert {
-    condition     = proxmox_virtual_environment_vm.openclaw.vm_id == 104
-    error_message = "OpenClaw VMID must stay 104 — changing it recreates the VM"
+    condition     = proxmox_virtual_environment_vm.devbox.vm_id == 106
+    error_message = "devbox VMID must stay 106 — changing it recreates the VM"
   }
 
   assert {
@@ -60,8 +60,8 @@ run "all_vms_start_on_host_boot" {
   }
 
   assert {
-    condition     = proxmox_virtual_environment_vm.openclaw.on_boot == true
-    error_message = "OpenClaw must start on host boot"
+    condition     = proxmox_virtual_environment_vm.devbox.on_boot == true
+    error_message = "devbox must start on host boot"
   }
 
   assert {
