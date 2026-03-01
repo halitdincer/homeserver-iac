@@ -1,4 +1,4 @@
-# Ubuntu 24.04 Cloud Image
+# Ubuntu 24.04 Noble Cloud Image
 resource "proxmox_virtual_environment_download_file" "ubuntu_cloud_image" {
   content_type = "iso"
   datastore_id = var.iso_storage
