@@ -44,6 +44,9 @@ spec:
             httpGet:
               path: /api/health
               port: 8000
+              httpHeaders:
+                - name: Host
+                  value: jobs.halitdincer.com
             initialDelaySeconds: 30
             periodSeconds: 30
             timeoutSeconds: 10
@@ -52,6 +55,9 @@ spec:
             httpGet:
               path: /api/health
               port: 8000
+              httpHeaders:
+                - name: Host
+                  value: jobs.halitdincer.com
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 5
