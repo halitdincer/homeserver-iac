@@ -4,9 +4,11 @@ kind: Kustomization
 resources:
   - serviceaccount.yaml
   - pvc.yaml
+  - secret.yaml
+  - postgres-deployment.yaml
+  - postgres-service.yaml
   - deployment.yaml
   - service.yaml
-  - secret.yaml
 
 images:
   - name: ghcr.io/halitdincer/job-scout

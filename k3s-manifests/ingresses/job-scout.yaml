@@ -20,7 +20,7 @@ spec:
               service:
                 name: job-scout
                 port:
-                  number: 3000
+                  number: 8000
   tls:
     - hosts:
         - jobs.halitdincer.com
