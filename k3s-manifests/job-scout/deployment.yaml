@@ -18,6 +18,22 @@ spec:
         app: job-scout
     spec:
       serviceAccountName: job-scout
+      initContainers:
+        - name: migrate
+          image: ghcr.io/halitdincer/job-scout:latest
+          imagePullPolicy: Always
+          command: ["python", "manage.py", "migrate", "--noinput"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: job-scout-secret
+                  key: DATABASE_URL
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: job-scout-secret
+                  key: SECRET_KEY
       containers:
         - name: job-scout
           image: ghcr.io/halitdincer/job-scout:latest
@@ -40,6 +56,11 @@ spec:
                 secretKeyRef:
                   name: job-scout-secret
                   key: DATABASE_URL
+            - name: INGEST_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: job-scout-secret
+                  key: INGEST_API_KEY
           livenessProbe:
             httpGet:
               path: /api/health
