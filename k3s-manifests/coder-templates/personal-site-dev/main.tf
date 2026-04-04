@@ -25,20 +25,13 @@ resource "coder_agent" "main" {
     export PATH="/home/coder/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
     # Clone repo if not already present
-    if [ ! -d /home/coder/job-scout/.git ]; then
-      git clone https://github.com/halitdincer/job-scout.git /home/coder/job-scout
+    if [ ! -d /home/coder/personal-site/.git ]; then
+      git clone https://github.com/halitdincer/personal-site.git /home/coder/personal-site
     fi
 
-    # Install Python dependencies
-    cd /home/coder/job-scout
-    if [ -f requirements.txt ]; then
-      pip3 install --user -r requirements.txt 2>/dev/null
-    fi
-
-    # Run migrations (SQLite for dev) and start Django dev server
-    export DATABASE_URL="sqlite:///db.sqlite3"
-    python3 manage.py migrate --run-syncdb 2>/dev/null
-    python3 manage.py runserver 0.0.0.0:8000 >/tmp/django-dev.log 2>&1 &
+    # Start a simple HTTP server for live preview
+    cd /home/coder/personal-site
+    python3 -m http.server 8080 >/tmp/preview.log 2>&1 &
 
     # Start code-server
     if [ ! -f /home/coder/.local/bin/code-server ]; then
@@ -52,14 +45,14 @@ module "claude-code" {
   source   = "registry.coder.com/coder/claude-code/coder"
   version  = "3.4.3"
   agent_id = coder_agent.main.id
-  workdir  = "/home/coder/job-scout"
+  workdir  = "/home/coder/personal-site"
 }
 
 module "jetbrains-gateway" {
   source   = "registry.coder.com/coder/jetbrains-gateway/coder"
   version  = "1.2.5"
   agent_id = coder_agent.main.id
-  folder   = "/home/coder/job-scout"
+  folder   = "/home/coder/personal-site"
   latest   = true
 }
 
@@ -67,17 +60,17 @@ resource "coder_app" "code-server" {
   agent_id     = coder_agent.main.id
   slug         = "code-server"
   display_name = "VS Code Web"
-  url          = "http://localhost:13337/?folder=/home/coder/job-scout"
+  url          = "http://localhost:13337/?folder=/home/coder/personal-site"
   icon         = "/icon/code.svg"
   subdomain    = false
   share        = "owner"
 }
 
-resource "coder_app" "dev-server" {
+resource "coder_app" "preview" {
   agent_id     = coder_agent.main.id
-  slug         = "dev-server"
-  display_name = "Job Scout Dev"
-  url          = "http://localhost:8000"
+  slug         = "preview"
+  display_name = "Live Preview"
+  url          = "http://localhost:8080"
   icon         = "/icon/widgets.svg"
   subdomain    = false
   share        = "owner"
@@ -85,7 +78,7 @@ resource "coder_app" "dev-server" {
 
 resource "kubernetes_persistent_volume_claim" "home" {
   metadata {
-    name      = "coder-${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}-job-scout"
+    name      = "coder-${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}-personal-site"
     namespace = "coder"
   }
   wait_until_bound = false
@@ -94,7 +87,7 @@ resource "kubernetes_persistent_volume_claim" "home" {
     storage_class_name = "local-path"
     resources {
       requests = {
-        storage = "10Gi"
+        storage = "5Gi"
       }
     }
   }
@@ -102,7 +95,7 @@ resource "kubernetes_persistent_volume_claim" "home" {
 
 resource "kubernetes_deployment" "workspace" {
   metadata {
-    name      = "coder-${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}-job-scout"
+    name      = "coder-${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}-personal-site"
     namespace = "coder"
     labels = {
       "coder.workspace" = data.coder_workspace.me.name
@@ -149,12 +142,12 @@ resource "kubernetes_deployment" "workspace" {
           }
           resources {
             requests = {
-              cpu    = "250m"
-              memory = "512Mi"
+              cpu    = "100m"
+              memory = "256Mi"
             }
             limits = {
-              cpu    = "2000m"
-              memory = "2Gi"
+              cpu    = "500m"
+              memory = "512Mi"
             }
           }
           volume_mount {

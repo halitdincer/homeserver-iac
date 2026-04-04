@@ -24,21 +24,58 @@ resource "coder_agent" "main" {
     #!/bin/bash
     export PATH="/home/coder/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
+    # Install Ruby via rbenv if not present
+    if ! command -v ruby > /dev/null 2>&1; then
+      if [ ! -d /home/coder/.rbenv ]; then
+        git clone https://github.com/rbenv/rbenv.git /home/coder/.rbenv
+        git clone https://github.com/rbenv/ruby-build.git /home/coder/.rbenv/plugins/ruby-build
+      fi
+      export RBENV_ROOT="/home/coder/.rbenv"
+      export PATH="$RBENV_ROOT/bin:$RBENV_ROOT/shims:$PATH"
+      echo 'export RBENV_ROOT="/home/coder/.rbenv"' >> /home/coder/.bashrc
+      echo 'export PATH="$RBENV_ROOT/bin:$RBENV_ROOT/shims:$PATH"' >> /home/coder/.bashrc
+      echo 'eval "$(rbenv init -)"' >> /home/coder/.bashrc
+      rbenv install 3.2.6 && rbenv global 3.2.6
+      gem install bundler
+    else
+      export RBENV_ROOT="/home/coder/.rbenv"
+      export PATH="$RBENV_ROOT/bin:$RBENV_ROOT/shims:$PATH"
+      eval "$(rbenv init -)"
+    fi
+
+    # Install Node.js LTS via nvm if not present
+    if ! command -v node > /dev/null 2>&1; then
+      curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+      export NVM_DIR="/home/coder/.nvm"
+      source "$NVM_DIR/nvm.sh"
+      nvm install --lts
+      nvm use --lts
+    else
+      export NVM_DIR="/home/coder/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+    fi
+
+    # Install MySQL client and Redis CLI
+    if ! command -v mysql > /dev/null 2>&1; then
+      sudo apt-get update -qq && sudo apt-get install -y -qq mysql-client redis-tools 2>/dev/null
+    fi
+
     # Clone repo if not already present
-    if [ ! -d /home/coder/job-scout/.git ]; then
-      git clone https://github.com/halitdincer/job-scout.git /home/coder/job-scout
+    if [ ! -d /home/coder/flight-tracker/.git ]; then
+      git clone https://github.com/halitdincer/flight-tracker.git /home/coder/flight-tracker
     fi
 
-    # Install Python dependencies
-    cd /home/coder/job-scout
-    if [ -f requirements.txt ]; then
-      pip3 install --user -r requirements.txt 2>/dev/null
+    # Install Ruby dependencies
+    cd /home/coder/flight-tracker/api
+    if [ -f Gemfile ] && [ ! -d vendor/bundle ]; then
+      bundle install 2>/dev/null
     fi
 
-    # Run migrations (SQLite for dev) and start Django dev server
-    export DATABASE_URL="sqlite:///db.sqlite3"
-    python3 manage.py migrate --run-syncdb 2>/dev/null
-    python3 manage.py runserver 0.0.0.0:8000 >/tmp/django-dev.log 2>&1 &
+    # Install Node dependencies
+    cd /home/coder/flight-tracker/web
+    if [ -f package.json ] && [ ! -d node_modules ]; then
+      npm install 2>/dev/null
+    fi
 
     # Start code-server
     if [ ! -f /home/coder/.local/bin/code-server ]; then
@@ -52,14 +89,14 @@ module "claude-code" {
   source   = "registry.coder.com/coder/claude-code/coder"
   version  = "3.4.3"
   agent_id = coder_agent.main.id
-  workdir  = "/home/coder/job-scout"
+  workdir  = "/home/coder/flight-tracker"
 }
 
 module "jetbrains-gateway" {
   source   = "registry.coder.com/coder/jetbrains-gateway/coder"
   version  = "1.2.5"
   agent_id = coder_agent.main.id
-  folder   = "/home/coder/job-scout"
+  folder   = "/home/coder/flight-tracker"
   latest   = true
 }
 
@@ -67,17 +104,27 @@ resource "coder_app" "code-server" {
   agent_id     = coder_agent.main.id
   slug         = "code-server"
   display_name = "VS Code Web"
-  url          = "http://localhost:13337/?folder=/home/coder/job-scout"
+  url          = "http://localhost:13337/?folder=/home/coder/flight-tracker"
   icon         = "/icon/code.svg"
   subdomain    = false
   share        = "owner"
 }
 
-resource "coder_app" "dev-server" {
+resource "coder_app" "rails-api" {
   agent_id     = coder_agent.main.id
-  slug         = "dev-server"
-  display_name = "Job Scout Dev"
-  url          = "http://localhost:8000"
+  slug         = "rails-api"
+  display_name = "Rails API"
+  url          = "http://localhost:3000"
+  icon         = "/icon/widgets.svg"
+  subdomain    = false
+  share        = "owner"
+}
+
+resource "coder_app" "react-dev" {
+  agent_id     = coder_agent.main.id
+  slug         = "react-dev"
+  display_name = "React Dev"
+  url          = "http://localhost:5173"
   icon         = "/icon/widgets.svg"
   subdomain    = false
   share        = "owner"
@@ -85,7 +132,7 @@ resource "coder_app" "dev-server" {
 
 resource "kubernetes_persistent_volume_claim" "home" {
   metadata {
-    name      = "coder-${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}-job-scout"
+    name      = "coder-${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}-flight-tracker"
     namespace = "coder"
   }
   wait_until_bound = false
@@ -102,7 +149,7 @@ resource "kubernetes_persistent_volume_claim" "home" {
 
 resource "kubernetes_deployment" "workspace" {
   metadata {
-    name      = "coder-${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}-job-scout"
+    name      = "coder-${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}-flight-tracker"
     namespace = "coder"
     labels = {
       "coder.workspace" = data.coder_workspace.me.name
