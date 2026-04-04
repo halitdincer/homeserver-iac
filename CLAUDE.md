@@ -77,17 +77,22 @@ See `docs/SECRETS.md` for paths table, read/write commands, and how to add a new
 
 ## Post-Outage Recovery
 
-Vault auto-unseals within ~30s via `vault-unsealer` pod. If other components fail:
+Fully automated via `vault-unsealer` pod (two containers):
+1. **unsealer** — detects sealed Vault, submits unseal keys (~30s)
+2. **recovery** — detects unseal event, waits for Vault readiness, then restarts ArgoCD and ESO
+
+Manual intervention should not be needed. To verify recovery:
 
 ```bash
-# 1. Restart ArgoCD
-kubectl rollout restart deployment argocd-repo-server argocd-server \
-  argocd-applicationset-controller argocd-notifications-controller -n argocd
-
-# 2. Restart ESO (caches stale Vault state)
-kubectl rollout restart deployment -n external-secrets
-
-# 3. Verify (~2 min to stabilise)
 kubectl get applications -n argocd -o wide
 kubectl get externalsecret --all-namespaces
+kubectl logs deployment/vault-unsealer -n vault -c recovery --tail=20
+```
+
+If automated recovery fails, manual fallback:
+
+```bash
+kubectl rollout restart deployment argocd-repo-server argocd-server \
+  argocd-applicationset-controller argocd-notifications-controller -n argocd
+kubectl rollout restart deployment -n external-secrets
 ```

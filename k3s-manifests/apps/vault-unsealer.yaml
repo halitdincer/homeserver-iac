@@ -14,6 +14,37 @@ spec:
       namespace: vault
     type: Opaque
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-unsealer
+  namespace: vault
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vault-unsealer
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "patch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vault-unsealer
+subjects:
+  - kind: ServiceAccount
+    name: vault-unsealer
+    namespace: vault
+roleRef:
+  kind: ClusterRole
+  name: vault-unsealer
+  apiGroup: rbac.authorization.k8s.io
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -29,6 +60,10 @@ spec:
       labels:
         app: vault-unsealer
     spec:
+      serviceAccountName: vault-unsealer
+      volumes:
+        - name: shared
+          emptyDir: {}
       containers:
         - name: unsealer
           image: hashicorp/vault:1.18.1
@@ -44,6 +79,7 @@ spec:
                   vault operator unseal "$KEY1"
                   vault operator unseal "$KEY2"
                   echo "$(date) Unseal commands sent"
+                  touch /shared/just-unsealed
                 fi
                 sleep 30
               done
@@ -60,10 +96,51 @@ spec:
                 secretKeyRef:
                   name: vault-unseal-keys
                   key: key2
+          volumeMounts:
+            - name: shared
+              mountPath: /shared
           resources:
             requests:
               cpu: 10m
               memory: 32Mi
             limits:
               cpu: 100m
+              memory: 64Mi
+        - name: recovery
+          image: bitnami/kubectl:1.29
+          command:
+            - /bin/sh
+            - -c
+            - |
+              restart_dependents() {
+                echo "$(date) Restarting ArgoCD and External Secrets..."
+                kubectl rollout restart deployment \
+                  argocd-repo-server argocd-server \
+                  argocd-applicationset-controller argocd-notifications-controller \
+                  -n argocd
+                kubectl rollout restart deployment -n external-secrets
+                echo "$(date) Dependent services restarted"
+              }
+
+              echo "$(date) Recovery sidecar started"
+
+              while true; do
+                if [ -f /shared/just-unsealed ]; then
+                  echo "$(date) Unseal event detected — waiting for Vault to stabilize..."
+                  rm -f /shared/just-unsealed
+                  kubectl wait --for=condition=ready pod/vault-0 -n vault --timeout=600s
+                  sleep 10
+                  restart_dependents
+                fi
+                sleep 10
+              done
+          volumeMounts:
+            - name: shared
+              mountPath: /shared
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 50m
               memory: 64Mi
