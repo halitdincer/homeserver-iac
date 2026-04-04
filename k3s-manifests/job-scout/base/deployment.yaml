@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: job-scout
-  namespace: job-scout
   labels:
     app: job-scout
 spec:

@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: job-scout
+spec:
+  template:
+    spec:
+      containers:
+        - name: job-scout
+          env:
+            - name: DEBUG
+              value: "True"
+            - name: ALLOWED_HOSTS
+              value: "*"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi

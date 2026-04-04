@@ -11,7 +11,7 @@ spec:
   source:
     repoURL: git@github.com:halitdincer/homeserver-iac.git
     targetRevision: main
-    path: k3s-manifests/job-scout
+    path: k3s-manifests/job-scout/overlays/production
   destination:
     server: https://kubernetes.default.svc
     namespace: job-scout
