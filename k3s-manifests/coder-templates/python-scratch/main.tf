@@ -54,6 +54,15 @@ module "claude-code" {
   workdir  = "/home/coder"
 }
 
+module "mux" {
+  count       = data.coder_workspace.me.start_count
+  source      = "registry.coder.com/coder/mux/coder"
+  version     = "1.4.3"
+  agent_id    = coder_agent.main.id
+  add_project = "/home/coder"
+  subdomain   = false
+}
+
 resource "coder_app" "jupyterlab" {
   agent_id     = coder_agent.main.id
   slug         = "jupyterlab"
