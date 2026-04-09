@@ -56,6 +56,15 @@ module "jetbrains-gateway" {
   latest   = true
 }
 
+module "mux" {
+  count       = data.coder_workspace.me.start_count
+  source      = "registry.coder.com/coder/mux/coder"
+  version     = "1.4.3"
+  agent_id    = coder_agent.main.id
+  add_project = "/home/coder/personal-site"
+  subdomain   = false
+}
+
 resource "coder_app" "code-server" {
   agent_id     = coder_agent.main.id
   slug         = "code-server"
