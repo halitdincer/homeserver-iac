@@ -5,9 +5,8 @@ apiVersion: argocd-image-updater.argoproj.io/v1alpha1
 kind: ImageUpdater
 metadata:
   name: job-scout
-  namespace: default
-spec:
   namespace: argocd
+spec:
   applicationRefs:
     - namePattern: "job-scout"
       images:
