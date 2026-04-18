@@ -1,11 +1,10 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-
 namespace: job-scout
-
 resources:
   - ../../base
-
 images:
   - name: ghcr.io/halitdincer/job-scout
     newTag: latest
+    newName: ghcr.io/halitdincer/job-scout
+    digest: sha256:4aebf3562de41b89fa73e32a43ccb5223f1d2322f2bf3037916993d574a9f422
