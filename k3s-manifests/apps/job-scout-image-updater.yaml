@@ -1,6 +1,6 @@
 # ImageUpdater CR for job-scout
-# Watches ghcr.io/halitdincer/job-scout:latest by digest and triggers
-# ArgoCD to redeploy when a new image is pushed to main branch.
+# Watches ghcr.io/halitdincer/job-scout:latest by digest and writes
+# the resolved image digest into the production kustomization on main.
 apiVersion: argocd-image-updater.argoproj.io/v1alpha1
 kind: ImageUpdater
 metadata:
@@ -13,7 +13,13 @@ spec:
       images:
         - alias: job-scout
           imageName: ghcr.io/halitdincer/job-scout:latest
+          manifestTargets:
+            kustomize:
+              name: ghcr.io/halitdincer/job-scout
           commonUpdateSettings:
             updateStrategy: digest
   writeBackConfig:
-    method: argocd
+    method: git
+    gitConfig:
+      branch: main
+      writeBackTarget: "kustomization:./k3s-manifests/job-scout/overlays/production"
