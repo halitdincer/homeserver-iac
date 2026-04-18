@@ -22,4 +22,4 @@ spec:
     method: git
     gitConfig:
       branch: main
-      writeBackTarget: "kustomization:./k3s-manifests/job-scout/overlays/production"
+      writeBackTarget: "kustomization:."
