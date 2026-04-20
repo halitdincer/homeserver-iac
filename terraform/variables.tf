@@ -76,3 +76,22 @@ variable "cloudflare_api_token" {
   type        = string
   sensitive   = true
 }
+
+# Namecheap (registrar — manages nameserver delegation to Cloudflare)
+variable "namecheap_user_name" {
+  description = "Namecheap account username"
+  type        = string
+  sensitive   = true
+}
+
+variable "namecheap_api_user" {
+  description = "Namecheap API username"
+  type        = string
+  sensitive   = true
+}
+
+variable "namecheap_api_key" {
+  description = "Namecheap API key"
+  type        = string
+  sensitive   = true
+}

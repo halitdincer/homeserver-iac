@@ -7,12 +7,16 @@
 
 mock_provider "proxmox" {}
 mock_provider "cloudflare" {}
+mock_provider "namecheap" {}
 
-# Required because these variables have no default and Proxmox/Cloudflare are mocked
+# Required because these variables have no default and providers are mocked
 variables {
   proxmox_password     = "mock"
   vm_default_password  = "mock"
   cloudflare_api_token = "mock"
+  namecheap_user_name  = "mock"
+  namecheap_api_user   = "mock"
+  namecheap_api_key    = "mock"
 }
 
 # ── VM IDs ────────────────────────────────────────────────────────────────────
@@ -81,5 +85,17 @@ run "dns_zone_is_correct" {
   assert {
     condition     = data.cloudflare_zone.halitdincer.filter.name == "halitdincer.com"
     error_message = "Cloudflare zone filter must target halitdincer.com — changing this would manage the wrong domain"
+  }
+}
+
+# ── Registrar safety ───────────────────────────────────────────────────────
+# Nameservers must point to Cloudflare. Changing this breaks all DNS resolution.
+
+run "nameservers_point_to_cloudflare" {
+  command = plan
+
+  assert {
+    condition     = contains(namecheap_domain_records.halitdincer.nameservers, "daphne.ns.cloudflare.com")
+    error_message = "Nameservers must include daphne.ns.cloudflare.com — changing this breaks DNS"
   }
 }

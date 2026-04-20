@@ -1,3 +1,14 @@
+# Namecheap registrar — delegate nameservers to Cloudflare
+resource "namecheap_domain_records" "halitdincer" {
+  domain = "halitdincer.com"
+  mode   = "overwrite"
+
+  nameservers = [
+    "daphne.ns.cloudflare.com",
+    "kellen.ns.cloudflare.com",
+  ]
+}
+
 # DNS records for halitdincer.com managed via Cloudflare API
 
 data "cloudflare_zone" "halitdincer" {

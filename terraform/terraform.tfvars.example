@@ -28,3 +28,9 @@ iso_storage  = "local"
 # Create at: https://dash.cloudflare.com/profile/api-tokens
 # Needs Zone:DNS:Edit permission for halitdincer.com
 cloudflare_api_token = "your-cloudflare-api-token-here"
+
+# Namecheap (registrar — manages nameserver delegation to Cloudflare)
+# Get API key at: https://www.namecheap.com/support/api/intro/
+namecheap_user_name = "your-namecheap-username"
+namecheap_api_user  = "your-namecheap-username"
+namecheap_api_key   = "your-namecheap-api-key"
