@@ -6,9 +6,9 @@ terraform {
       source  = "bpg/proxmox"
       version = "~> 0.70"
     }
-    namecheap = {
-      source  = "namecheap/namecheap"
-      version = "~> 2.0"
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5.0"
     }
   }
 
@@ -30,9 +30,6 @@ provider "proxmox" {
   }
 }
 
-provider "namecheap" {
-  user_name   = var.namecheap_user_name
-  api_user    = var.namecheap_api_user
-  api_key     = var.namecheap_api_key
-  use_sandbox = false
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
 }

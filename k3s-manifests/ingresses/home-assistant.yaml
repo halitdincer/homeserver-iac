@@ -1,7 +1,7 @@
 ---
 # Home Assistant - Smart Home
 # Domain: ha.halitdincer.com, homeassistant.halitdincer.com
-# Backend: 192.168.2.206:8123
+# Backend: 10.10.10.103:8123
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -69,6 +69,6 @@ metadata:
   namespace: default
 subsets:
 - addresses:
-  - ip: 192.168.2.206
+  - ip: 10.10.10.103
   ports:
   - port: 8123

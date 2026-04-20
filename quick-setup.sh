@@ -186,20 +186,24 @@ Host homeserver-*
     StrictHostKeyChecking no
 
 Host homeserver-proxmox
-    HostName 192.168.2.50
+    HostName 10.10.10.1
     User root
 
-Host homeserver-nginx
-    HostName 192.168.2.10
-    User dincer
-
 Host homeserver-immich
-    HostName 192.168.2.202
+    HostName 10.10.10.100
     User root
 
 Host homeserver-ha
-    HostName 192.168.2.206
+    HostName 10.10.10.103
     User root
+
+Host homeserver-k3s
+    HostName 10.10.10.105
+    User root
+
+Host homeserver-devbox
+    HostName 10.10.10.106
+    User dincer
 EOF
     echo -e "${GREEN}✓ SSH config updated${NC}"
 fi
@@ -220,11 +224,11 @@ cat >> "$SHELL_RC" << EOF
 
 # Homeserver Infrastructure as Code
 export TF_VAR_proxmox_user="root@pam"
-export TF_VAR_proxmox_api_url="https://192.168.2.50:8006/api2/json"
+export TF_VAR_proxmox_api_url="https://10.10.10.1:8006/api2/json"
 export TF_VAR_proxmox_node="pve1"
-export TF_VAR_network_gateway="192.168.2.1"
+export TF_VAR_network_gateway="10.10.10.1"
 export TF_VAR_network_bridge="vmbr0"
-export TF_VAR_dns_servers="192.168.2.1 8.8.8.8"
+export TF_VAR_dns_servers="10.10.10.1 8.8.8.8"
 export TF_VAR_storage_pool="local-lvm"
 export TF_VAR_iso_storage="local"
 
@@ -258,7 +262,7 @@ echo -e "${GREEN}✓ Environment configured${NC}"
 # Load environment for this session
 export TF_VAR_proxmox_password="$PROXMOX_PASSWORD"
 export TF_VAR_proxmox_user="root@pam"
-export TF_VAR_proxmox_api_url="https://192.168.2.50:8006/api2/json"
+export TF_VAR_proxmox_api_url="https://10.10.10.1:8006/api2/json"
 
 # Step 6: Initialize Terraform and git-secrets
 echo -e "\n${BLUE}[6/6] Finalizing setup...${NC}"
@@ -317,7 +321,7 @@ echo "  3. Test: terraform plan"
 echo "  4. Test: ansible all -m ping"
 echo ""
 echo -e "${YELLOW}To copy SSH key to servers:${NC}"
-echo "  ssh-copy-id -i ~/.ssh/homeserver_ed25519 dincer@192.168.2.10"
-echo "  ssh-copy-id -i ~/.ssh/homeserver_ed25519 root@192.168.2.50"
+echo "  ssh-copy-id -i ~/.ssh/homeserver_ed25519 dincer@10.10.10.10"
+echo "  ssh-copy-id -i ~/.ssh/homeserver_ed25519 root@10.10.10.1"
 echo ""
 echo -e "${GREEN}Happy Infrastructure as Coding! 🚀${NC}"

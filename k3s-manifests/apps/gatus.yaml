@@ -90,7 +90,7 @@ data:
       # ── Internal ──
       - name: Proxmox
         group: Internal
-        url: https://192.168.2.50:8006
+        url: https://10.10.10.1:8006
         interval: 1m
         client:
           insecure: true

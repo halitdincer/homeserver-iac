@@ -1,7 +1,7 @@
 ---
 # Immich - Photo Management
 # Domain: photos.halitdincer.com
-# Backend: 192.168.2.202:2283
+# Backend: 10.10.10.100:2283
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -37,15 +37,25 @@ spec:
               number: 2283
 
 ---
-# External Service pointing to Immich VM
+# ClusterIP service with manual Endpoints pointing to Immich VM
 apiVersion: v1
 kind: Service
 metadata:
   name: immich-external
   namespace: default
 spec:
-  type: ExternalName
-  externalName: 192.168.2.202
   ports:
   - port: 2283
     targetPort: 2283
+
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: immich-external
+  namespace: default
+subsets:
+- addresses:
+  - ip: 10.10.10.100
+  ports:
+  - port: 2283

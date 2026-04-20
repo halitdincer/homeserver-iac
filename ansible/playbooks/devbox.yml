@@ -89,7 +89,7 @@
     - name: Show devbox deployment status
       debug:
         msg: >
-          devbox provisioned at 192.168.2.209.
+          devbox provisioned at 10.10.10.106.
           Next: SSH in, run `sudo tailscale up --auth-key=<key>`,
           get IP with `tailscale ip -4`, then update DNS in a follow-up PR.
-          SSH: dincer@192.168.2.209 or via Tailscale once registered.
+          SSH: dincer@10.10.10.106 or via Tailscale once registered.

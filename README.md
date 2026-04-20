@@ -1,15 +1,15 @@
 # homeserver-iac
 
-Infrastructure-as-code for a Proxmox VE 9.1.1 homeserver (Dell OptiPlex, `192.168.2.50`). Three tools manage everything: **Terraform** provisions VMs and DNS records, **ArgoCD** deploys all K3s services via GitOps, and **Ansible** handles VM-level configuration. Domain: `halitdincer.com` (Namecheap DNS via Terraform).
+Infrastructure-as-code for a Proxmox VE 9.1.1 homeserver (Dell OptiPlex, `10.10.10.1`). Three tools manage everything: **Terraform** provisions VMs and DNS records, **ArgoCD** deploys all K3s services via GitOps, and **Ansible** handles VM-level configuration. Domain: `halitdincer.com` (Namecheap DNS via Terraform). Public access is via Cloudflare Tunnel.
 
 ## VMs
 
 | VMID | IP | Service | Notes |
 |------|----|---------|-------|
-| 100 | 192.168.2.202 | Immich (photos) | Ubuntu 24.04 |
-| 103 | 192.168.2.206 | Home Assistant OS | HAOS 16.3, no SSH |
-| 104 | 192.168.2.208 | OpenClaw (AI assistant) | Tailscale-only access |
-| 105 | 192.168.2.216 | K3s cluster | Runs all services below |
+| 100 | 10.10.10.100 | Immich (photos) | Ubuntu 24.04 |
+| 103 | 10.10.10.103 | Home Assistant OS | HAOS 16.3, no SSH |
+| 105 | 10.10.10.105 | K3s cluster | Runs all services below |
+| 106 | 10.10.10.106 | devbox (AI coding agents) | Ubuntu 24.04 |
 
 ## K3s Apps
 

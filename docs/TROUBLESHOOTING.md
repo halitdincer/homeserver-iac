@@ -62,7 +62,7 @@ kubectl get externalsecret --all-namespaces
 - Ingress exists: `kubectl get ingress --all-namespaces`
 - TLS cert issued: `kubectl get certificate --all-namespaces`
 - DNS record points to correct IP: `dig photos.halitdincer.com`
-- Port 80/443 forwarded on router to `192.168.2.216`
+- Public access via Cloudflare Tunnel (no port forwarding needed)
 
 ## 7. Atlantis not responding to PR
 

@@ -6,12 +6,13 @@
 # (mock_provider intercepts all provider calls).
 
 mock_provider "proxmox" {}
-mock_provider "namecheap" {}
+mock_provider "cloudflare" {}
 
-# Required because these variables have no default and Proxmox/Namecheap are mocked
+# Required because these variables have no default and Proxmox/Cloudflare are mocked
 variables {
-  proxmox_password    = "mock"
-  vm_default_password = "mock"
+  proxmox_password     = "mock"
+  vm_default_password  = "mock"
+  cloudflare_api_token = "mock"
 }
 
 # ── VM IDs ────────────────────────────────────────────────────────────────────
@@ -71,20 +72,14 @@ run "all_vms_start_on_host_boot" {
 }
 
 # ── DNS safety ────────────────────────────────────────────────────────────────
-# OVERWRITE mode means Terraform is the sole source of truth for all DNS records.
-# Switching to MERGE would silently leave orphaned records that could conflict
-# with new ones. Changing the domain would redirect all traffic elsewhere.
+# Cloudflare zone lookup must target the correct domain. Changing the filter
+# would cause all DNS records to be created in the wrong zone.
 
-run "dns_config_is_safe" {
+run "dns_zone_is_correct" {
   command = plan
 
   assert {
-    condition     = namecheap_domain_records.halitdincer.domain == "halitdincer.com"
-    error_message = "DNS resource must manage halitdincer.com — changing this would stop managing your domain"
-  }
-
-  assert {
-    condition     = namecheap_domain_records.halitdincer.mode == "OVERWRITE"
-    error_message = "DNS mode must be OVERWRITE so Terraform is the sole source of truth for all records"
+    condition     = data.cloudflare_zone.halitdincer.filter.name == "halitdincer.com"
+    error_message = "Cloudflare zone filter must target halitdincer.com — changing this would manage the wrong domain"
   }
 }

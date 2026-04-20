@@ -37,10 +37,10 @@ echo -e "${GREEN}✓ Ansible $(ansible --version | head -1 | awk '{print $2}')${
 # Check network connectivity to Proxmox
 echo -e "\n${BLUE}[2/6] Checking Proxmox connectivity...${NC}"
 
-if ping -c 1 -W 2 192.168.2.50 &> /dev/null; then
-    echo -e "${GREEN}✓ Proxmox host reachable at 192.168.2.50${NC}"
+if ping -c 1 -W 2 10.10.10.1 &> /dev/null; then
+    echo -e "${GREEN}✓ Proxmox host reachable at 10.10.10.1${NC}"
 else
-    echo -e "${YELLOW}⚠ Cannot reach Proxmox at 192.168.2.50${NC}"
+    echo -e "${YELLOW}⚠ Cannot reach Proxmox at 10.10.10.1${NC}"
     echo -e "${YELLOW}Make sure you're on the same network${NC}"
 fi
 
@@ -54,7 +54,7 @@ if [ ! -f "terraform.tfvars" ]; then
     cp terraform.tfvars.example terraform.tfvars
     echo -e "${RED}⚠ IMPORTANT: Edit terraform.tfvars with your API token!${NC}"
     echo -e "${YELLOW}Get token by running on Proxmox:${NC}"
-    echo -e "${YELLOW}  ssh root@192.168.2.50${NC}"
+    echo -e "${YELLOW}  ssh root@10.10.10.1${NC}"
     echo -e "${YELLOW}  pveum user token add root@pam terraform --privsep 0${NC}"
 
     read -p "Press enter when you've updated terraform.tfvars..."
@@ -118,8 +118,8 @@ if ansible all -i inventory/hosts.yml -m ping &> /dev/null; then
 else
     echo -e "${YELLOW}⚠ Ansible connectivity test failed${NC}"
     echo -e "${YELLOW}You may need to set up SSH keys:${NC}"
-    echo -e "${YELLOW}  ssh-copy-id root@192.168.2.202  # Immich${NC}"
-    echo -e "${YELLOW}  ssh-copy-id dincer@192.168.2.10  # Nginx${NC}"
+    echo -e "${YELLOW}  ssh-copy-id root@10.10.10.100  # Immich${NC}"
+    echo -e "${YELLOW}  ssh-copy-id root@10.10.10.1    # Proxmox${NC}"
 fi
 
 # Summary

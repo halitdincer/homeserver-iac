@@ -20,7 +20,7 @@
   gather_facts: no
 
   vars:
-    ha_url: "http://192.168.2.206:8123"
+    ha_url: "http://10.10.10.103:8123"
 
   vars_files:
     - ../secrets.yml

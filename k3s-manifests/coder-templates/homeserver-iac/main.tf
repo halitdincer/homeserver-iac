@@ -76,20 +76,16 @@ resource "coder_agent" "main" {
     chmod 600 /home/coder/.ssh/homeserver_ed25519
     cat >> /home/coder/.ssh/config << 'SSHCONF'
 Host homeserver-proxmox
-  HostName 192.168.2.50
+  HostName 10.10.10.1
   User root
   IdentityFile ~/.ssh/homeserver_ed25519
 Host homeserver-k3s
-  HostName 192.168.2.216
+  HostName 10.10.10.105
   User root
   IdentityFile ~/.ssh/homeserver_ed25519
 Host homeserver-immich
-  HostName 192.168.2.202
+  HostName 10.10.10.100
   User root
-  IdentityFile ~/.ssh/homeserver_ed25519
-Host homeserver-openclaw
-  HostName 192.168.2.208
-  User dincer
   IdentityFile ~/.ssh/homeserver_ed25519
 SSHCONF
     chmod 600 /home/coder/.ssh/config

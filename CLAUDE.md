@@ -1,15 +1,15 @@
 # homeserver-iac — Agent Ops Bible
 
-Proxmox VE 9.1.1 on Dell OptiPlex (192.168.2.50). Managed via Terraform (VMs + DNS), ArgoCD (K3s services), and Ansible (VM config).
+Proxmox VE 9.1.1 on Dell OptiPlex (10.10.10.1). Managed via Terraform (VMs + DNS), ArgoCD (K3s services), and Ansible (VM config). Public access is via Cloudflare Tunnel (not port forwarding).
 
 ## VMs
 
 | VMID | IP | Service | URL |
 |------|----|---------|-----|
-| 100 | 192.168.2.202 | Immich (photos) | photos.halitdincer.com |
-| 103 | 192.168.2.206 | Home Assistant OS | ha.halitdincer.com |
-| 106 | 192.168.2.209 | devbox (AI coding agents) | devbox.halitdincer.com |
-| 105 | 192.168.2.216 | K3s (ingress + all services) | argocd.halitdincer.com |
+| 100 | 10.10.10.100 | Immich (photos) | photos.halitdincer.com |
+| 103 | 10.10.10.103 | Home Assistant OS | ha.halitdincer.com |
+| 105 | 10.10.10.105 | K3s (ingress + all services) | argocd.halitdincer.com |
+| 106 | 10.10.10.106 | devbox (AI coding agents) | devbox.halitdincer.com |
 
 VM 103: no SSH — HAOS only, use REST API at port 8123.
 
@@ -70,10 +70,10 @@ See `docs/SECRETS.md` for paths table, read/write commands, and how to add a new
 
 | Host | Command |
 |------|---------|
-| Proxmox | `ssh -i ~/.ssh/id_ed25519 root@192.168.2.50` |
-| K3s VM | `ssh -i ~/.ssh/id_ed25519 root@192.168.2.216` |
-| Immich VM | `ssh -i ~/.ssh/id_ed25519 root@192.168.2.202` |
-| devbox | `ssh -i ~/.ssh/id_ed25519 dincer@192.168.2.209` |
+| Proxmox | `ssh -i ~/.ssh/id_ed25519 root@10.10.10.1` |
+| K3s VM | `ssh -i ~/.ssh/id_ed25519 root@10.10.10.105` |
+| Immich VM | `ssh -i ~/.ssh/id_ed25519 root@10.10.10.100` |
+| devbox | `ssh -i ~/.ssh/id_ed25519 dincer@10.10.10.106` |
 
 ## Post-Outage Recovery
 

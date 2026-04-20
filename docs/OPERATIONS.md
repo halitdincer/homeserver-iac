@@ -68,10 +68,10 @@ ansible all -i ansible/inventory/hosts.yml -m ping
 
 ```bash
 # List all VMs and status
-ssh -i ~/.ssh/id_ed25519 root@192.168.2.50 "qm list"
+ssh -i ~/.ssh/id_ed25519 root@10.10.10.1 "qm list"
 
 # Show VM config
-ssh -i ~/.ssh/id_ed25519 root@192.168.2.50 "qm config 105"
+ssh -i ~/.ssh/id_ed25519 root@10.10.10.1 "qm config 105"
 ```
 
 ## Monitoring URLs

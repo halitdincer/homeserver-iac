@@ -251,7 +251,7 @@ resource "proxmox_virtual_environment_vm" "devbox" {
   initialization {
     ip_config {
       ipv4 {
-        address = "192.168.2.209/24"
+        address = "10.10.10.106/24"
         gateway = var.network_gateway
       }
     }

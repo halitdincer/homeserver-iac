@@ -4,7 +4,7 @@
 # No TLS certificate - Tailscale WireGuard provides encryption
 # nginx proxies HTTP → Proxmox HTTPS (self-signed, ssl-verify off)
 #
-# NOTE: The Endpoints object (192.168.2.50:8006) is bootstrapped manually once:
+# NOTE: The Endpoints object (10.10.10.1:8006) is bootstrapped manually once:
 #   kubectl apply -f - <<'EOF'
 #   apiVersion: v1
 #   kind: Endpoints
@@ -13,7 +13,7 @@
 #     namespace: default
 #   subsets:
 #     - addresses:
-#         - ip: 192.168.2.50
+#         - ip: 10.10.10.1
 #       ports:
 #         - port: 8006
 #   EOF

@@ -2,7 +2,7 @@
 variable "proxmox_api_url" {
   description = "Proxmox API URL"
   type        = string
-  default     = "https://192.168.2.50:8006/api2/json"
+  default     = "https://10.10.10.1:8006/api2/json"
 }
 
 variable "proxmox_user" {
@@ -28,7 +28,7 @@ variable "proxmox_node" {
 variable "network_gateway" {
   description = "Network gateway"
   type        = string
-  default     = "192.168.2.1"
+  default     = "10.10.10.1"
 }
 
 variable "network_bridge" {
@@ -40,7 +40,7 @@ variable "network_bridge" {
 variable "dns_servers" {
   description = "DNS servers"
   type        = string
-  default     = "192.168.2.1 8.8.8.8"
+  default     = "10.10.10.1 8.8.8.8"
 }
 
 # SSH Configuration
@@ -70,24 +70,9 @@ variable "vm_default_password" {
   sensitive   = true
 }
 
-# Namecheap DNS
-variable "namecheap_user_name" {
-  description = "Namecheap account username"
+# Cloudflare DNS
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token with DNS edit permissions"
   type        = string
-  default     = ""
-  sensitive   = true
-}
-
-variable "namecheap_api_user" {
-  description = "Namecheap API user (usually same as username)"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
-variable "namecheap_api_key" {
-  description = "Namecheap API key"
-  type        = string
-  default     = ""
   sensitive   = true
 }

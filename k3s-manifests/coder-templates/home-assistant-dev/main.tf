@@ -144,7 +144,7 @@ resource "kubernetes_deployment" "workspace" {
           }
           env {
             name  = "HA_URL"
-            value = "http://192.168.2.206:8123"
+            value = "http://10.10.10.103:8123"
           }
           env {
             name = "HA_TOKEN"

@@ -1,68 +1,65 @@
 ---
-- name: Install and Configure Tailscale
+- name: Install and configure Tailscale
   hosts: "{{ target_hosts | default('all') }}"
   become: yes
-  vars:
-    tailscale_up: true
-    tailscale_args: "--accept-routes"
 
   tasks:
-    - name: Check if running on Debian/Ubuntu
+    - name: Gather OS facts
       ansible.builtin.set_fact:
         is_debian: "{{ ansible_os_family == 'Debian' }}"
+        ts_distro: "{{ ansible_distribution | lower }}"
+        ts_release: "{{ ansible_distribution_release | lower }}"
 
-    - name: Add Tailscale repository key (Debian/Ubuntu)
-      ansible.builtin.apt_key:
-        url: https://pkgs.tailscale.com/stable/debian/bullseye.noarmor.gpg
-        keyring: /usr/share/keyrings/tailscale-archive-keyring.gpg
-        state: present
+    - name: Add Tailscale GPG key
+      ansible.builtin.get_url:
+        url: "https://pkgs.tailscale.com/stable/{{ ts_distro }}/{{ ts_release }}.noarmor.gpg"
+        dest: /usr/share/keyrings/tailscale-archive-keyring.gpg
+        mode: '0644'
       when: is_debian
 
-    - name: Add Tailscale repository (Debian/Ubuntu)
+    - name: Add Tailscale apt repository
       ansible.builtin.apt_repository:
-        repo: "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/debian bullseye main"
+        repo: "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/{{ ts_distro }} {{ ts_release }} main"
         filename: tailscale
         state: present
       when: is_debian
 
-    - name: Update apt cache
-      ansible.builtin.apt:
-        update_cache: yes
+    - name: Update apt cache (Proxmox enterprise repo errors are non-fatal)
+      ansible.builtin.command: apt-get update
+      failed_when: false
+      changed_when: false
       when: is_debian
 
     - name: Install Tailscale
       ansible.builtin.apt:
         name: tailscale
         state: present
+        update_cache: no
       when: is_debian
 
-    - name: Check if Tailscale is already authenticated
-      ansible.builtin.command: tailscale status
-      register: tailscale_status
-      failed_when: false
-      changed_when: false
-
-    - name: Display Tailscale status
-      ansible.builtin.debug:
-        msg: "{{ tailscale_status.stdout_lines }}"
-      when: tailscale_status.rc == 0
-
-    - name: Enable and start Tailscale service
+    - name: Enable and start tailscaled
       ansible.builtin.systemd:
         name: tailscaled
         enabled: yes
         state: started
 
-    - name: Get Tailscale authentication URL if not authenticated
-      ansible.builtin.command: "tailscale up {{ tailscale_args }}"
-      register: tailscale_up_output
-      when:
-        - tailscale_up | bool
-        - tailscale_status.rc != 0 or 'Logged out' in tailscale_status.stdout
+    - name: Check Tailscale auth status
+      ansible.builtin.command: tailscale status
+      register: tailscale_status
       failed_when: false
-      changed_when: "'To authenticate, visit:' in tailscale_up_output.stderr or 'Success' in tailscale_up_output.stderr"
+      changed_when: false
 
-    - name: Display authentication URL
+    - name: Bring Tailscale up (prints browser auth URL if not authenticated)
+      ansible.builtin.command: >
+        tailscale up
+        --accept-routes
+        --ssh
+        --hostname={{ tailscale_hostname | default(inventory_hostname) }}
+      register: tailscale_up_output
+      when: tailscale_status.rc != 0 or 'Logged out' in tailscale_status.stdout or force_reup | default(false) | bool
+      failed_when: false
+
+    - name: Display auth URL — visit this in your browser
       ansible.builtin.debug:
         msg: "{{ tailscale_up_output.stderr_lines }}"
       when:
@@ -70,42 +67,34 @@
         - tailscale_up_output.stderr_lines is defined
         - tailscale_up_output.stderr_lines | length > 0
 
-    - name: Get Tailscale IP address
+    - name: Get Tailscale IP
       ansible.builtin.command: tailscale ip -4
       register: tailscale_ip
       changed_when: false
       failed_when: false
 
-    - name: Display Tailscale IP
+    - name: Report result
       ansible.builtin.debug:
-        msg: "Tailscale IP for {{ inventory_hostname }}: {{ tailscale_ip.stdout }}"
-      when: tailscale_ip.rc == 0 and tailscale_ip.stdout != ""
+        msg: >-
+          {{ inventory_hostname }}
+          ({{ tailscale_hostname | default(inventory_hostname) }}):
+          {{ tailscale_ip.stdout if tailscale_ip.rc == 0 else 'not yet authenticated' }}
 
-    - name: Save Tailscale IP to local facts
-      ansible.builtin.set_fact:
-        tailscale_ip_address: "{{ tailscale_ip.stdout }}"
-      when: tailscale_ip.rc == 0 and tailscale_ip.stdout != ""
-
-- name: Summary
+- name: Post-install instructions
   hosts: localhost
   gather_facts: no
   tasks:
-    - name: Display installation summary
+    - name: Next steps
       ansible.builtin.debug:
         msg: |
-          ====================================
-          Tailscale Installation Complete!
-          ====================================
+          Done. For each host that printed an auth URL above, open the URL in
+          your browser to authenticate it to your tailnet.
 
-          Next steps:
-          1. Authenticate each host by visiting the URLs shown above
-          2. Check the Tailscale admin console: https://login.tailscale.com/admin/machines
-          3. Note down the Tailscale IPs for each host
-          4. Update your Terraform config to use Tailscale IPs for remote access
+          Then in the Tailscale admin console (https://login.tailscale.com/admin/dns):
+            - Enable MagicDNS
+            - Enable the "Override local DNS" option
 
-          To test connectivity:
-          - ping <tailscale-ip>
-          - ssh root@<tailscale-ip>
-
-          To check Tailscale status on any host:
-          - ansible <host> -i inventory/hosts.yml -m command -a "tailscale status"
+          After that, from your MacBook (with Tailscale running):
+            ssh proxmox
+            ssh k3s
+            ssh immich

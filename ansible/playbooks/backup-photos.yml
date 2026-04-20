@@ -12,7 +12,7 @@
   become: yes
 
   vars:
-    immich_host: "192.168.2.202"
+    immich_host: "10.10.10.100"
     immich_source: "/mnt/immich-data/"
     usb_mount_point: /mnt/usb-backup
     backup_dest: "{{ usb_mount_point }}/immich-photos/"
