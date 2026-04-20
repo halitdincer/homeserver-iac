@@ -43,17 +43,22 @@ kubectl exec -n vault vault-0 -- vault operator unseal <KEY2>
 
 ## 5. Post-outage full cluster recovery
 
+**Automated:** `vault-unsealer` pod handles this automatically:
+1. Unsealer container detects sealed Vault, submits unseal keys (~30s)
+2. Recovery container detects unseal, waits for readiness, restarts ArgoCD + ESO
+
+**Verify automated recovery worked:**
 ```bash
-# 1. Restart ArgoCD
-kubectl rollout restart deployment argocd-repo-server argocd-server \
-  argocd-applicationset-controller argocd-notifications-controller -n argocd
-
-# 2. Restart ESO
-kubectl rollout restart deployment -n external-secrets
-
-# 3. Verify (allow ~2 min)
 kubectl get applications -n argocd -o wide
 kubectl get externalsecret --all-namespaces
+kubectl logs deployment/vault-unsealer -n vault -c recovery --tail=20
+```
+
+**Manual fallback (if vault-unsealer pod is down):**
+```bash
+kubectl rollout restart deployment argocd-repo-server argocd-server \
+  argocd-applicationset-controller argocd-notifications-controller -n argocd
+kubectl rollout restart deployment -n external-secrets
 ```
 
 ## 6. Service not accessible externally
@@ -86,3 +91,29 @@ kubectl top node
 kubectl top pods --all-namespaces --sort-by=memory
 ```
 Evict non-critical pods or resize the VM via `terraform/vms.tf` + Atlantis PR.
+
+## 9. Cloudflare Tunnel down (all public services 502/522)
+
+**Cause:** `cloudflared` service on Proxmox host stopped or lost connectivity.
+
+**Fix:**
+```bash
+ssh root@10.10.10.1 "systemctl status cloudflared"
+ssh root@10.10.10.1 "systemctl restart cloudflared"
+# Verify: curl -I https://home.halitdincer.com (expect 200)
+```
+
+## 10. WiFi lost on Proxmox host (all VMs lose internet)
+
+**Cause:** wpa_supplicant crashed or WiFi AP restarted. VMs stay up but have no NAT path out.
+
+**CRITICAL:** Never use `ifreload -a` to restore — it kills the bridge and drops all VM connectivity.
+
+**Fix (manual ip commands only):**
+```bash
+# From physical console or Tailscale (if still up):
+ip link set wlp3s0 up
+wpa_supplicant -B -i wlp3s0 -c /etc/wpa_supplicant/wpa_supplicant.conf
+dhclient wlp3s0
+# Verify: ping 1.1.1.1 from host AND from a VM
+```

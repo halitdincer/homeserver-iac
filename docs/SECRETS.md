@@ -59,3 +59,8 @@ kubeseal --cert /tmp/sealed-secrets.crt --format yaml < secret.yaml
 # Fetch cert: kubectl get secret -n kube-system sealed-secrets-keym852r \
 #   -o jsonpath='{.data.tls\.crt}' | base64 -d
 ```
+
+## Related Docs
+
+- Operations workflows: `docs/OPERATIONS.md`
+- Troubleshooting ESO sync issues: `docs/TROUBLESHOOTING.md` §3

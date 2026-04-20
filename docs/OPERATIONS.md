@@ -1,93 +1,56 @@
 # Operations
 
-## Terraform (via Atlantis)
+## K3s Apps (ArgoCD managed)
+
+| ArgoCD App | Path / Source | Purpose |
+|------------|--------------|---------|
+| `infrastructure` | `k3s-manifests/infrastructure/` | nginx ingress, cert-manager, CSStore |
+| `apps` | `k3s-manifests/apps/` | Atlantis, Coder, homepage, monitoring |
+| `ingresses` | `k3s-manifests/ingresses/` | All Ingress resources |
+| `job-scout` | `k3s-manifests/job-scout/` | job-scout (kustomize) |
+| `vault` | Helm: hashicorp/vault@0.29.1 | Vault (standalone Raft) |
+| `external-secrets` | Helm: external-secrets@0.14.0 | ESO |
+
+## Change Workflows
+
+| Tool | Trigger | Rule |
+|------|---------|------|
+| Terraform | PR merge → Atlantis applies | Never `terraform apply` locally |
+| ArgoCD | Push to `main` → auto-sync (~3 min) | Never `kubectl apply` directly |
+| Ansible | Manual CLI only | `ansible-playbook -i ansible/inventory/hosts.yml ...` |
+
+## SSH Access
+
+All use `-i ~/.ssh/id_ed25519`:
+
+| Host | User@IP |
+|------|---------|
+| Proxmox | `root@10.10.10.1` |
+| K3s VM | `root@10.10.10.105` |
+| Immich VM | `root@10.10.10.100` |
+| devbox | `dincer@10.10.10.106` |
+
+VM 103 (Home Assistant): no SSH — HAOS only, REST API port 8123.
+
+## Coder Templates (`k3s-manifests/coder-templates/`)
+
+homeserver-iac, job-scout-dev, flight-tracker-dev, home-assistant-dev, personal-site-dev, kubernetes, python-scratch
+
+## Common Commands
 
 ```bash
-# Make changes, push to a branch, open PR
-git checkout -b infra/my-change
-git push -u origin HEAD
-# → Atlantis posts terraform plan as PR comment (~30s)
-# → Merge PR → Atlantis applies automatically
-
-# Check pending plan output
-# Visit https://atlantis.halitdincer.com or read PR comments
-
-# Inspect state read-only (safe)
-kubectl exec -n atlantis deploy/atlantis -- \
-  terraform show /atlantis-home/state/terraform.tfstate
+kubectl get applications -n argocd -o wide   # sync status
+kubectl port-forward -n vault vault-0 8200   # Vault UI
+ssh root@10.10.10.1 "qm list"               # list VMs
 ```
 
-Never run `terraform apply` locally. State lives at `/atlantis-home/state/terraform.tfstate` on the Atlantis PVC.
+## URLs
 
-## K3s / ArgoCD
-
-```bash
-# Check sync status of all apps
-kubectl get applications -n argocd -o wide
-
-# Force sync a specific app
-kubectl patch application <app-name> -n argocd \
-  --type merge -p '{"operation":{"sync":{}}}'
-
-# Get pods (all namespaces)
-kubectl get pods --all-namespaces
-
-# Port-forward Vault UI
-kubectl port-forward -n vault vault-0 8200:8200
-```
-
-## Vault Secrets
-
-```bash
-# Read
-kubectl exec -n vault vault-0 -- vault kv get secret/atlantis/config
-
-# Patch (non-destructive, updates listed keys only)
-kubectl exec -n vault vault-0 -- vault kv patch secret/atlantis/config KEY=value
-
-# Put (overwrites all keys)
-kubectl exec -n vault vault-0 -- vault kv put secret/myapp/config key1=val1 key2=val2
-```
-
-See `docs/SECRETS.md` for the full Vault paths table.
-
-## Ansible
-
-```bash
-# Run all playbooks
-ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/all.yml
-
-# Run a specific playbook
-ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/immich.yml
-
-# Connectivity check
-ansible all -i ansible/inventory/hosts.yml -m ping
-```
-
-## VM Management (Proxmox)
-
-```bash
-# List all VMs and status
-ssh -i ~/.ssh/id_ed25519 root@10.10.10.1 "qm list"
-
-# Show VM config
-ssh -i ~/.ssh/id_ed25519 root@10.10.10.1 "qm config 105"
-```
-
-## Monitoring URLs
-
-| Service | URL |
-|---------|-----|
-| ArgoCD | https://argocd.halitdincer.com |
-| Atlantis | https://atlantis.halitdincer.com |
-| Grafana | https://grafana.halitdincer.com |
-| Gatus (uptime) | https://status.halitdincer.com |
-| Homepage | https://home.halitdincer.com |
+ArgoCD: argocd.halitdincer.com | Atlantis: atlantis.halitdincer.com | Grafana: grafana.halitdincer.com | Gatus: status.halitdincer.com | Homepage: home.halitdincer.com
 
 ## Adding a New K3s App
 
-1. Store secrets in Vault: `vault kv put secret/myapp/config ...`
-2. Create `ExternalSecret` manifest in `k3s-manifests/apps/` (see existing examples)
-3. Create Deployment / Service / Ingress manifests in `k3s-manifests/apps/`
-4. Add `Application` YAML to `k3s-manifests/argocd-apps/`; `kubectl apply` it once to bootstrap
-5. Push to `main` — ArgoCD picks up and deploys; ESO syncs secrets automatically
+1. Store secrets in Vault
+2. Create `ExternalSecret` + Deployment/Service/Ingress in `k3s-manifests/apps/`
+3. Add `Application` YAML to `k3s-manifests/argocd-apps/`; `kubectl apply` once
+4. Push to `main` — ArgoCD deploys, ESO syncs secrets
