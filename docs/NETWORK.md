@@ -46,3 +46,16 @@ Namecheap (registrar) -> Cloudflare NS (`daphne` + `kellen`) -> Cloudflare DNS r
 ## Ingress Routing
 
 nginx-ingress on K3s (`10.10.10.105:80/443`) handles both tunnel and Tailscale traffic. ConfigMap sets `use-forwarded-headers: "true"` to trust Cloudflare's `X-Forwarded-Proto` (prevents redirect loops).
+
+## Network Recovery (auto-failover)
+
+Connection priority: LAN (`nic0`, metric 100) > WiFi (`wlp3s0`, metric 200) > Recovery
+
+| Layer | Trigger | Action |
+|-------|---------|--------|
+| Watchdog | Both interfaces down for 2 min | Restore known-good config, restart networking |
+| Hardware watchdog | Kernel hang >30s | Auto-reboot (services start normally) |
+| hostapd AP | 3 failed recovery cycles (~15 min) | WiFi becomes AP: SSID `proxmox-recovery`, SSH at `192.168.4.1` |
+
+Deploy: `ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/network-recovery.yml`
+Logs: `journalctl -t network-watchdog -f`

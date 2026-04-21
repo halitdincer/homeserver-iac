@@ -109,11 +109,23 @@ ssh root@10.10.10.1 "systemctl restart cloudflared"
 
 **CRITICAL:** Never use `ifreload -a` to restore — it kills the bridge and drops all VM connectivity.
 
-**Fix (manual ip commands only):**
+**Automated recovery:** The network watchdog (`network-watchdog.timer`) handles this automatically:
+- Detects failure within 2 min, restores known-good config
+- If 3 recovery attempts fail, switches WiFi to AP mode (SSID: `proxmox-recovery`)
+- Check logs: `journalctl -t network-watchdog -f`
+
+**Manual fix (if watchdog hasn't recovered yet):**
 ```bash
-# From physical console or Tailscale (if still up):
+# From Tailscale (if still up) or physical console:
 ip link set wlp3s0 up
 wpa_supplicant -B -i wlp3s0 -c /etc/wpa_supplicant/wpa_supplicant.conf
 dhclient wlp3s0
 # Verify: ping 1.1.1.1 from host AND from a VM
+```
+
+**If in AP recovery mode:**
+```bash
+# Connect to "proxmox-recovery" WiFi, then:
+ssh root@192.168.4.1
+/usr/local/sbin/restore-normal-network.sh
 ```

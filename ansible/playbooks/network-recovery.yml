@@ -1,0 +1,452 @@
+---
+# 3-Layer Network Auto-Recovery for Proxmox
+#
+# Layer 1: Connectivity watchdog (auto-heals broken networking in ~2 min)
+# Layer 2: Hardware watchdog (auto-reboots on kernel hang)
+# Layer 3: hostapd AP fallback (local WiFi AP for SSH without keyboard/monitor)
+#
+# Priority: LAN (nic0) > WiFi (wlp3s0) > Recovery
+#
+# Usage:
+#   ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/network-recovery.yml
+
+- name: Configure 3-layer network auto-recovery
+  hosts: proxmox_host
+  become: yes
+
+  vars:
+    lan_interface: nic0
+    wifi_interface: wlp3s0
+    recovery_ap_ssid: proxmox-recovery
+    recovery_ap_password: "{{ vault_recovery_ap_password }}"
+    recovery_ap_ip: 192.168.4.1
+    recovery_dhcp_start: 192.168.4.100
+    recovery_dhcp_end: 192.168.4.200
+    watchdog_interval_sec: 30
+    max_failures: 4
+    max_recoveries: 3
+    known_good_dir: /etc/network/.known-good
+
+  tasks:
+    # ── Prerequisites ──────────────────────────────────────────────────────────
+
+    - name: Install hostapd
+      apt:
+        name: hostapd
+        state: present
+
+    - name: Ensure hostapd is stopped and disabled (only started by recovery)
+      ansible.builtin.systemd:
+        name: hostapd
+        state: stopped
+        enabled: no
+        masked: no
+
+    # ── Known-good config snapshot (Layer 1) ───────────────────────────────────
+
+    - name: Create known-good config directory
+      file:
+        path: "{{ known_good_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Snapshot current interfaces as known-good
+      copy:
+        src: /etc/network/interfaces
+        dest: "{{ known_good_dir }}/interfaces"
+        remote_src: yes
+        mode: '0600'
+
+    - name: Snapshot current wpa_supplicant config as known-good
+      copy:
+        src: /etc/wpa_supplicant/wpa_supplicant.conf
+        dest: "{{ known_good_dir }}/wpa_supplicant.conf"
+        remote_src: yes
+        mode: '0600'
+
+    # ── Network watchdog script (Layer 1) ──────────────────────────────────────
+
+    - name: Deploy network watchdog script
+      copy:
+        dest: /usr/local/sbin/network-watchdog.sh
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          # Network Watchdog — runs every 30s via systemd timer
+          # Priority: LAN > WiFi > Recovery
+          # Distinguishes "config broken" from "upstream broken" to avoid false escalation
+          set -uo pipefail
+
+          STATE_DIR="/run/network-watchdog"
+          FAIL_COUNT_FILE="$STATE_DIR/fail_count"
+          RECOVERY_COUNT_FILE="$STATE_DIR/recovery_count"
+          AP_MODE_FILE="$STATE_DIR/ap_mode_active"
+          KNOWN_GOOD_DIR="{{ known_good_dir }}"
+          LAN_IFACE="{{ lan_interface }}"
+          WIFI_IFACE="{{ wifi_interface }}"
+          MAX_FAILURES={{ max_failures }}
+          MAX_RECOVERIES={{ max_recoveries }}
+
+          mkdir -p "$STATE_DIR"
+
+          # If AP mode is active, do nothing (user must manually restore)
+          if [[ -f "$AP_MODE_FILE" ]]; then
+              exit 0
+          fi
+
+          # ── Connectivity checks ──
+
+          check_interface_up() {
+              local iface="$1"
+              ip link show "$iface" 2>/dev/null | grep -q "state UP"
+          }
+
+          check_interface_has_ip() {
+              local iface="$1"
+              ip addr show "$iface" 2>/dev/null | grep -q "inet "
+          }
+
+          check_lan_carrier() {
+              # Returns true if cable is physically connected
+              [[ -f "/sys/class/net/$LAN_IFACE/carrier" ]] && [[ "$(cat /sys/class/net/$LAN_IFACE/carrier 2>/dev/null)" == "1" ]]
+          }
+
+          check_wifi_associated() {
+              iw dev "$WIFI_IFACE" link 2>/dev/null | grep -q "Connected to"
+          }
+
+          check_gateway() {
+              local gw
+              gw=$(ip route show default 2>/dev/null | awk '/default via/{print $3; exit}')
+              [[ -n "$gw" ]] && ping -c1 -W2 "$gw" &>/dev/null
+          }
+
+          check_internet() {
+              ping -c1 -W3 1.1.1.1 &>/dev/null || ping -c1 -W3 8.8.8.8 &>/dev/null
+          }
+
+          # ── Main logic ──
+
+          # Priority 1: Check LAN
+          if check_lan_carrier && check_interface_has_ip "$LAN_IFACE"; then
+              if check_internet; then
+                  # LAN is up and working — happy path
+                  echo 0 > "$FAIL_COUNT_FILE"
+                  echo 0 > "$RECOVERY_COUNT_FILE"
+                  logger -t network-watchdog "OK: LAN ($LAN_IFACE) connected"
+                  exit 0
+              fi
+          fi
+
+          # Priority 2: Check WiFi
+          if check_wifi_associated && check_interface_has_ip "$WIFI_IFACE"; then
+              if check_internet; then
+                  # WiFi is up and working (no LAN, but fine)
+                  echo 0 > "$FAIL_COUNT_FILE"
+                  echo 0 > "$RECOVERY_COUNT_FILE"
+                  logger -t network-watchdog "OK: WiFi ($WIFI_IFACE) connected (no LAN)"
+                  exit 0
+              fi
+
+              # WiFi associated but no internet — check if gateway reachable
+              if check_gateway; then
+                  # Config is fine, upstream/ISP issue — do NOT escalate
+                  echo 0 > "$FAIL_COUNT_FILE"
+                  logger -t network-watchdog "WARN: WiFi up, gateway reachable, no internet (ISP/router issue)"
+                  exit 0
+              fi
+          fi
+
+          # ── Both interfaces down or no connectivity ──
+
+          fail_count=$(cat "$FAIL_COUNT_FILE" 2>/dev/null || echo 0)
+          fail_count=$((fail_count + 1))
+          echo "$fail_count" > "$FAIL_COUNT_FILE"
+
+          logger -t network-watchdog "FAIL: no connectivity ($fail_count/$MAX_FAILURES)"
+
+          if [[ $fail_count -lt $MAX_FAILURES ]]; then
+              exit 0
+          fi
+
+          # ── Attempt recovery (Layer 1) ──
+
+          recovery_count=$(cat "$RECOVERY_COUNT_FILE" 2>/dev/null || echo 0)
+          recovery_count=$((recovery_count + 1))
+          echo "$recovery_count" > "$RECOVERY_COUNT_FILE"
+          echo 0 > "$FAIL_COUNT_FILE"
+
+          logger -t network-watchdog "RECOVERY: attempt $recovery_count/$MAX_RECOVERIES"
+
+          if [[ $recovery_count -gt $MAX_RECOVERIES ]]; then
+              logger -t network-watchdog "ESCALATE: max recoveries exceeded, switching to AP mode"
+              /usr/local/sbin/start-ap-mode.sh
+              exit 0
+          fi
+
+          # Restore known-good config (NEVER use ifreload -a)
+
+          # 1. Kill existing network daemons
+          killall wpa_supplicant 2>/dev/null || true
+          killall dhclient 2>/dev/null || true
+          sleep 1
+
+          # 2. Restore config files
+          cp "$KNOWN_GOOD_DIR/interfaces" /etc/network/interfaces
+          cp "$KNOWN_GOOD_DIR/wpa_supplicant.conf" /etc/wpa_supplicant/wpa_supplicant.conf
+
+          # 3. Try LAN first
+          ip link set "$LAN_IFACE" up 2>/dev/null || true
+          dhclient -1 -timeout 5 "$LAN_IFACE" 2>/dev/null &
+
+          # 4. Bring WiFi back up
+          ip link set "$WIFI_IFACE" down 2>/dev/null || true
+          sleep 1
+          ip link set "$WIFI_IFACE" up
+          sleep 1
+          wpa_supplicant -B -i "$WIFI_IFACE" -c /etc/wpa_supplicant/wpa_supplicant.conf
+          sleep 2
+          dhclient -1 -timeout 10 "$WIFI_IFACE" 2>/dev/null || true
+
+          # 5. Re-apply NAT rules
+          systemctl restart nftables 2>/dev/null || true
+
+          logger -t network-watchdog "RECOVERY: restore complete, waiting for next check to verify"
+
+    # ── AP mode script (Layer 3) ───────────────────────────────────────────────
+
+    - name: Deploy start-ap-mode script
+      copy:
+        dest: /usr/local/sbin/start-ap-mode.sh
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          # Switch WiFi to AP mode for emergency local access
+          # VMs keep running on vmbr0 (no internet, but accessible locally)
+          set -uo pipefail
+
+          STATE_DIR="/run/network-watchdog"
+          AP_MODE_FILE="$STATE_DIR/ap_mode_active"
+          WIFI_IFACE="{{ wifi_interface }}"
+          AP_IP="{{ recovery_ap_ip }}"
+
+          mkdir -p "$STATE_DIR"
+
+          logger -t network-watchdog "AP-MODE: starting hostapd fallback"
+
+          # Stop client-mode services
+          killall wpa_supplicant 2>/dev/null || true
+          killall dhclient 2>/dev/null || true
+          sleep 1
+
+          # Flush WiFi interface
+          ip addr flush dev "$WIFI_IFACE" 2>/dev/null || true
+          ip link set "$WIFI_IFACE" down
+          sleep 1
+
+          # Assign static IP for AP
+          ip link set "$WIFI_IFACE" up
+          ip addr add "$AP_IP/24" dev "$WIFI_IFACE"
+
+          # Enable recovery dnsmasq config (DHCP for AP clients)
+          ln -sf /etc/dnsmasq.d/recovery-ap.conf.disabled /etc/dnsmasq.d/recovery-ap.conf
+          systemctl restart dnsmasq
+
+          # Start hostapd
+          systemctl start hostapd
+
+          # Mark AP mode active
+          touch "$AP_MODE_FILE"
+
+          logger -t network-watchdog "AP-MODE: active. SSID={{ recovery_ap_ssid }}, IP=$AP_IP"
+          echo "=== AP MODE ACTIVE ==="
+          echo "Connect to WiFi: {{ recovery_ap_ssid }}"
+          echo "Then SSH to: root@$AP_IP"
+          echo "To restore: /usr/local/sbin/restore-normal-network.sh"
+
+    # ── Restore normal mode script ─────────────────────────────────────────────
+
+    - name: Deploy restore-normal-network script
+      copy:
+        dest: /usr/local/sbin/restore-normal-network.sh
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          # Restore normal networking from AP fallback mode
+          set -uo pipefail
+
+          STATE_DIR="/run/network-watchdog"
+          AP_MODE_FILE="$STATE_DIR/ap_mode_active"
+          KNOWN_GOOD_DIR="{{ known_good_dir }}"
+          LAN_IFACE="{{ lan_interface }}"
+          WIFI_IFACE="{{ wifi_interface }}"
+
+          logger -t network-watchdog "RESTORE: reverting from AP mode to normal"
+
+          # Stop AP services
+          systemctl stop hostapd 2>/dev/null || true
+          rm -f /etc/dnsmasq.d/recovery-ap.conf
+          systemctl restart dnsmasq
+
+          # Flush AP config from WiFi interface
+          ip addr flush dev "$WIFI_IFACE" 2>/dev/null || true
+          ip link set "$WIFI_IFACE" down
+          sleep 1
+
+          # Restore known-good config
+          cp "$KNOWN_GOOD_DIR/interfaces" /etc/network/interfaces
+          cp "$KNOWN_GOOD_DIR/wpa_supplicant.conf" /etc/wpa_supplicant/wpa_supplicant.conf
+
+          # Try LAN first
+          ip link set "$LAN_IFACE" up 2>/dev/null || true
+          dhclient -1 -timeout 5 "$LAN_IFACE" 2>/dev/null &
+
+          # Start WiFi client mode
+          ip link set "$WIFI_IFACE" up
+          sleep 1
+          wpa_supplicant -B -i "$WIFI_IFACE" -c /etc/wpa_supplicant/wpa_supplicant.conf
+          sleep 3
+          dhclient -1 -timeout 10 "$WIFI_IFACE" 2>/dev/null || true
+
+          # Restart NAT
+          systemctl restart nftables 2>/dev/null || true
+
+          # Clear AP mode flag and reset counters
+          rm -f "$AP_MODE_FILE"
+          echo 0 > "$STATE_DIR/fail_count"
+          echo 0 > "$STATE_DIR/recovery_count"
+
+          logger -t network-watchdog "RESTORE: normal mode restored"
+          echo "=== NORMAL MODE RESTORED ==="
+          echo "Verify with: ping 1.1.1.1"
+
+    # ── hostapd config (Layer 3) ───────────────────────────────────────────────
+
+    - name: Deploy hostapd recovery config
+      copy:
+        dest: /etc/hostapd/hostapd-recovery.conf
+        mode: '0600'
+        content: |
+          interface={{ wifi_interface }}
+          driver=nl80211
+          ssid={{ recovery_ap_ssid }}
+          hw_mode=g
+          channel=7
+          wmm_enabled=0
+          macaddr_acl=0
+          auth_algs=1
+          ignore_broadcast_ssid=0
+          wpa=2
+          wpa_passphrase={{ recovery_ap_password }}
+          wpa_key_mgmt=WPA-PSK
+          rsn_pairwise=CCMP
+
+    - name: Configure hostapd to use recovery config file
+      copy:
+        dest: /etc/default/hostapd
+        content: |
+          DAEMON_CONF="/etc/hostapd/hostapd-recovery.conf"
+
+    # ── Recovery dnsmasq config (disabled by default) ──────────────────────────
+
+    - name: Deploy recovery AP dnsmasq config (disabled by default)
+      copy:
+        dest: /etc/dnsmasq.d/recovery-ap.conf.disabled
+        mode: '0644'
+        content: |
+          # Active only during AP recovery mode (symlinked to .conf by start-ap-mode.sh)
+          listen-address={{ recovery_ap_ip }}
+          dhcp-range={{ recovery_dhcp_start }},{{ recovery_dhcp_end }},255.255.255.0,12h
+          dhcp-option=3,{{ recovery_ap_ip }}
+          dhcp-option=6,{{ recovery_ap_ip }}
+
+    # Ensure the symlink doesn't exist in normal operation
+    - name: Remove recovery dnsmasq symlink if present (normal state)
+      file:
+        path: /etc/dnsmasq.d/recovery-ap.conf
+        state: absent
+
+    # ── systemd service + timer (Layer 1) ──────────────────────────────────────
+
+    - name: Deploy network-watchdog systemd service
+      copy:
+        dest: /etc/systemd/system/network-watchdog.service
+        content: |
+          [Unit]
+          Description=Network connectivity watchdog
+          After=network-online.target
+
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/sbin/network-watchdog.sh
+
+    - name: Deploy network-watchdog systemd timer
+      copy:
+        dest: /etc/systemd/system/network-watchdog.timer
+        content: |
+          [Unit]
+          Description=Network watchdog timer (checks connectivity every {{ watchdog_interval_sec }}s)
+
+          [Timer]
+          OnBootSec=60
+          OnUnitActiveSec={{ watchdog_interval_sec }}
+
+          [Install]
+          WantedBy=timers.target
+
+    - name: Enable and start network-watchdog timer
+      ansible.builtin.systemd:
+        name: network-watchdog.timer
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+    # ── Hardware watchdog (Layer 2) ────────────────────────────────────────────
+
+    - name: Create systemd watchdog config directory
+      file:
+        path: /etc/systemd/system.conf.d
+        state: directory
+        mode: '0755'
+
+    - name: Configure hardware watchdog via systemd
+      copy:
+        dest: /etc/systemd/system.conf.d/watchdog.conf
+        content: |
+          [Manager]
+          RuntimeWatchdogSec=30
+          RebootWatchdogSec=10min
+      register: hw_watchdog_conf
+
+    - name: Reload systemd manager if watchdog config changed
+      ansible.builtin.systemd:
+        daemon_reexec: yes
+      when: hw_watchdog_conf.changed
+
+    # ── Summary ────────────────────────────────────────────────────────────────
+
+    - name: Display deployment summary
+      debug:
+        msg:
+          - "==== Network Auto-Recovery Deployed ===="
+          - ""
+          - "Connection priority: LAN ({{ lan_interface }}) > WiFi ({{ wifi_interface }}) > Recovery"
+          - ""
+          - "Layer 1: Network Watchdog"
+          - "  Timer: every {{ watchdog_interval_sec }}s (first check 60s after boot)"
+          - "  Threshold: {{ max_failures }} failures ({{ max_failures * watchdog_interval_sec }}s) before recovery"
+          - "  Max recoveries: {{ max_recoveries }} before AP escalation"
+          - ""
+          - "Layer 2: Hardware Watchdog"
+          - "  RuntimeWatchdogSec=30 (auto-reboot on 30s kernel hang)"
+          - ""
+          - "Layer 3: hostapd AP Fallback"
+          - "  SSID: {{ recovery_ap_ssid }}"
+          - "  IP: {{ recovery_ap_ip }}"
+          - "  SSH: root@{{ recovery_ap_ip }}"
+          - ""
+          - "Manual commands:"
+          - "  Force AP mode:   /usr/local/sbin/start-ap-mode.sh"
+          - "  Restore normal:  /usr/local/sbin/restore-normal-network.sh"
+          - "  Check logs:      journalctl -t network-watchdog -f"
+          - "  Timer status:    systemctl status network-watchdog.timer"
