@@ -49,10 +49,9 @@ data:
           - uid: ntfy-1
             type: webhook
             settings:
-              url: https://ntfy.sh
+              url: https://ntfy.sh/halitdincer-homeserver
               httpMethod: POST
-              body: >-
-                {"topic":"halitdincer-homeserver","title":"{{ .CommonLabels.alertname }}","message":"Status: {{ .Status }}. {{ range .Alerts }}{{ .Annotations.description }} {{ end }}","priority":4}
+              body: "{{ .CommonLabels.alertname }} is {{ .Status }}.\n{{ range .Alerts }}{{ .Annotations.description }}\n{{ end }}"
     policies:
       - orgId: 1
         receiver: ntfy-homeserver
