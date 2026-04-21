@@ -1,0 +1,26 @@
+# Home Assistant Configuration
+# Managed via homeserver-iac — deploy with:
+#   ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/deploy-ha-config.yml
+
+homeassistant:
+  name: Home
+  packages: !include_dir_named packages/
+
+# HTTP / Reverse Proxy
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 10.42.0.0/16    # K3s pod CIDR (nginx-ingress)
+    - 10.10.10.105    # K3s node IP
+
+# Default integrations
+default_config:
+
+# Text-to-speech
+tts:
+  - platform: google_translate
+
+# Includes
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml

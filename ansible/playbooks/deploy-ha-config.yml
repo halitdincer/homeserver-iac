@@ -1,0 +1,72 @@
+---
+# Deploy Home Assistant configuration via SSH
+#
+# Prerequisites:
+#   1. Install "Advanced SSH & Web Terminal" add-on in HA
+#   2. Configure add-on: disable "Protection Mode", set authorized_keys
+#   3. Add SSH key to HA: copy ~/.ssh/id_ed25519.pub content to add-on config
+#
+# Usage:
+#   ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/deploy-ha-config.yml
+#
+# Dry run (see what would change):
+#   ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/deploy-ha-config.yml --check --diff
+
+- name: Deploy Home Assistant configuration
+  hosts: home_assistant
+  gather_facts: no
+
+  vars:
+    ha_config_src: "{{ playbook_dir }}/../../home-assistant/"
+    ha_config_dest: /config/
+
+  tasks:
+    - name: Verify SSH connectivity
+      wait_for_connection:
+        timeout: 10
+
+    - name: Sync configuration files
+      ansible.builtin.synchronize:
+        src: "{{ ha_config_src }}"
+        dest: "{{ ha_config_dest }}"
+        delete: no
+        rsync_opts:
+          - "--exclude=.git"
+          - "--exclude=.gitkeep"
+          - "--exclude=README.md"
+          - "--checksum"
+      register: sync_result
+
+    - name: Check configuration validity
+      command: ha core check
+      register: config_check
+      changed_when: false
+      failed_when: config_check.rc != 0
+
+    - name: Display validation result
+      debug:
+        msg: "Configuration valid — {{ config_check.stdout }}"
+
+    - name: Restart Home Assistant
+      command: ha core restart
+      when: sync_result.changed
+
+    - name: Wait for HA to come back online
+      uri:
+        url: "http://{{ ansible_host }}:8123/api/"
+        method: GET
+        status_code: 200
+      register: ha_health
+      retries: 30
+      delay: 5
+      until: ha_health.status == 200
+      when: sync_result.changed
+
+    - name: Deployment complete
+      debug:
+        msg: >-
+          {% if sync_result.changed %}
+          Config deployed and HA restarted successfully.
+          {% else %}
+          No changes detected — HA not restarted.
+          {% endif %}
