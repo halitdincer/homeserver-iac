@@ -25,9 +25,13 @@ metadata:
 data:
   datasources.yaml: |
     apiVersion: 1
+    deleteDatasources:
+    - name: Prometheus
+      orgId: 1
     datasources:
     - name: Prometheus
       uid: prometheus
+      orgId: 1
       type: prometheus
       access: proxy
       url: http://prometheus.monitoring.svc.cluster.local:9090
