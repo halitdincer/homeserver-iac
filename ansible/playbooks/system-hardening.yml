@@ -1,0 +1,145 @@
+---
+# System hardening for all homeserver hosts
+#
+# 1. node_exporter on Proxmox (hardware metrics for Prometheus)
+# 2. Unattended security updates on Ubuntu VMs
+# 3. Journal size cap on all hosts (prevent runaway logs filling disk)
+#
+# Usage:
+#   ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/system-hardening.yml -e ansible_host=100.117.57.21
+
+- name: Install node_exporter on Proxmox (hardware metrics)
+  hosts: proxmox_host
+  become: yes
+
+  vars:
+    node_exporter_version: "1.8.2"
+    node_exporter_arch: "amd64"
+
+  tasks:
+    - name: Check if node_exporter is already installed
+      stat:
+        path: /usr/local/bin/node_exporter
+      register: ne_binary
+
+    - name: Download node_exporter
+      get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}.tar.gz"
+        dest: /tmp/node_exporter.tar.gz
+      when: not ne_binary.stat.exists
+
+    - name: Extract node_exporter
+      unarchive:
+        src: /tmp/node_exporter.tar.gz
+        dest: /tmp/
+        remote_src: yes
+      when: not ne_binary.stat.exists
+
+    - name: Install node_exporter binary
+      copy:
+        src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}/node_exporter"
+        dest: /usr/local/bin/node_exporter
+        mode: '0755'
+        remote_src: yes
+      when: not ne_binary.stat.exists
+
+    - name: Create node_exporter systemd service
+      copy:
+        dest: /etc/systemd/system/node_exporter.service
+        content: |
+          [Unit]
+          Description=Prometheus Node Exporter
+          After=network-online.target
+
+          [Service]
+          Type=simple
+          ExecStart=/usr/local/bin/node_exporter --collector.systemd --collector.processes
+          Restart=always
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Enable and start node_exporter
+      ansible.builtin.systemd:
+        name: node_exporter
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+    - name: Verify node_exporter is serving metrics
+      uri:
+        url: http://localhost:9100/metrics
+        return_content: no
+        status_code: 200
+      register: ne_check
+      retries: 3
+      delay: 2
+
+    - name: Display node_exporter status
+      debug:
+        msg: "node_exporter running on port 9100 — Prometheus can scrape http://10.10.10.1:9100/metrics"
+
+- name: Configure journal size cap on all reachable hosts
+  hosts: proxmox_host:ubuntu_vms
+  become: yes
+
+  tasks:
+    - name: Create journald.conf.d directory
+      file:
+        path: /etc/systemd/journald.conf.d
+        state: directory
+        mode: '0755'
+
+    - name: Set journal max size to 500M
+      copy:
+        dest: /etc/systemd/journald.conf.d/size-limit.conf
+        content: |
+          [Journal]
+          SystemMaxUse=500M
+          MaxFileSec=7day
+      register: journald_conf
+
+    - name: Restart journald if config changed
+      ansible.builtin.systemd:
+        name: systemd-journald
+        state: restarted
+      when: journald_conf.changed
+
+- name: Configure unattended security updates on Ubuntu VMs
+  hosts: ubuntu_vms
+  become: yes
+
+  tasks:
+    - name: Install unattended-upgrades
+      apt:
+        name:
+          - unattended-upgrades
+          - apt-listchanges
+        state: present
+
+    - name: Enable unattended-upgrades
+      copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Unattended-Upgrade "1";
+          APT::Periodic::AutocleanInterval "7";
+
+    - name: Configure unattended-upgrades (security only, auto-reboot disabled)
+      copy:
+        dest: /etc/apt/apt.conf.d/50unattended-upgrades
+        content: |
+          Unattended-Upgrade::Allowed-Origins {
+              "${distro_id}:${distro_codename}-security";
+              "${distro_id}ESMApps:${distro_codename}-apps-security";
+              "${distro_id}ESM:${distro_codename}-infra-security";
+          };
+          Unattended-Upgrade::AutoFixInterruptedDpkg "true";
+          Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+          Unattended-Upgrade::Remove-Unused-Dependencies "true";
+          Unattended-Upgrade::Automatic-Reboot "false";
+
+    - name: Display status
+      debug:
+        msg: "Unattended security updates enabled (no auto-reboot)"
