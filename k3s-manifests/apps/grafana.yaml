@@ -58,8 +58,108 @@ data:
         group_wait: 30s
         group_interval: 5m
         repeat_interval: 4h
-  # Alert rules are created via Grafana API after startup (datasource UID
-  # must exist first). See setup commands in docs/OPERATIONS.md.
+    groups:
+      - orgId: 1
+        name: Homeserver Critical
+        folder: Alerts
+        interval: 1m
+        rules:
+          - uid: disk-space-critical
+            title: Disk Full (>95%)
+            condition: C
+            for: 10m
+            noDataState: OK
+            execErrState: OK
+            annotations:
+              description: "Disk almost full"
+            labels:
+              severity: critical
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: prometheus
+                model:
+                  expr: "(1 - node_filesystem_avail_bytes{fstype!=\"tmpfs\",mountpoint=\"/\"} / node_filesystem_size_bytes) * 100"
+                  refId: A
+              - refId: C
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: __expr__
+                model:
+                  type: threshold
+                  expression: A
+                  conditions:
+                    - evaluator:
+                        type: gt
+                        params: [95]
+                  refId: C
+          - uid: memory-critical
+            title: Memory Critical (>95%)
+            condition: C
+            for: 5m
+            noDataState: OK
+            execErrState: OK
+            annotations:
+              description: "Memory almost exhausted"
+            labels:
+              severity: critical
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: prometheus
+                model:
+                  expr: "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100"
+                  refId: A
+              - refId: C
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: __expr__
+                model:
+                  type: threshold
+                  expression: A
+                  conditions:
+                    - evaluator:
+                        type: gt
+                        params: [95]
+                  refId: C
+          - uid: host-down
+            title: Proxmox Host Unreachable
+            condition: C
+            for: 5m
+            noDataState: OK
+            execErrState: OK
+            annotations:
+              description: "Proxmox host not responding"
+            labels:
+              severity: critical
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: prometheus
+                model:
+                  expr: "up{job=\"proxmox-host\"} == 0"
+                  refId: A
+              - refId: C
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: __expr__
+                model:
+                  type: threshold
+                  expression: A
+                  conditions:
+                    - evaluator:
+                        type: gt
+                        params: [0]
+                  refId: C
 
 ---
 # ntfy relay — receives Grafana webhook default payload,
