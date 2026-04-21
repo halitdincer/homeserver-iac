@@ -139,7 +139,7 @@ spec:
       containers:
       - name: relay
         image: cgr.dev/chainguard/python:latest
-        command: ["python3", "/app/relay.py"]
+        command: ["python3", "-u", "/app/relay.py"]
         ports:
         - containerPort: 8080
         volumeMounts:
