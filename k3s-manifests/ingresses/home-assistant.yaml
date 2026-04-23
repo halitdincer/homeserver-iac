@@ -17,13 +17,6 @@ metadata:
     # Increase timeouts
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    # Clear forwarded headers that cause HA to return 400 (no trusted_proxies configured)
-    # Override the variables used by the standard proxy_set_header directives
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      proxy_set_header Upgrade $http_upgrade;
-      proxy_set_header Connection "upgrade";
-      set $full_x_forwarded_for "";
-      set $pass_access_scheme "";
 spec:
   ingressClassName: nginx
   tls:
