@@ -1,6 +1,6 @@
 # homeserver-iac — Agent Guide
 
-Proxmox VE 9.1.1 on Dell OptiPlex (10.10.10.1). Managed via Terraform (VMs + DNS), ArgoCD (K3s services), and Ansible (VM config). Public access via Cloudflare Tunnel.
+Proxmox VE 9.1.1 on Dell OptiPlex (10.10.10.1). Managed via Terraform (VMs + DNS), ArgoCD (K3s services), Ansible (VM config + HA config). Public access via Cloudflare Tunnel.
 
 ## VMs
 
@@ -18,6 +18,7 @@ Proxmox VE 9.1.1 on Dell OptiPlex (10.10.10.1). Managed via Terraform (VMs + DNS
 | Terraform | PR merge → Atlantis applies | Never `terraform apply` locally |
 | ArgoCD | Push to `main` → auto-sync (~3 min) | Never `kubectl apply` directly |
 | Ansible | Manual CLI only | `ansible-playbook -i ansible/inventory/hosts.yml ...` |
+| HA Config | Manual via Ansible | `ansible-playbook ... deploy-ha-config.yml` (syncs `home-assistant/` → HA `/config/`) |
 
 ## Hard Rules
 
@@ -39,6 +40,7 @@ Proxmox VE 9.1.1 on Dell OptiPlex (10.10.10.1). Managed via Terraform (VMs + DNS
 | `docs/BACKUPS.md` | Backup strategy, playbooks, verification |
 | `docs/SECRETS.md` | Vault paths, read/write commands, adding secrets |
 | `docs/TROUBLESHOOTING.md` | Problem/solution pairs, recovery procedures |
+| `home-assistant/` | HA config files (deployed via Ansible to VM 103) |
 
 ## Doc Maintenance
 
@@ -50,5 +52,6 @@ After modifying `terraform/`, `k3s-manifests/`, or `ansible/` files, update the 
 | K3s apps, ArgoCD apps, Coder templates | `docs/OPERATIONS.md` |
 | ExternalSecret manifests, Vault config | `docs/SECRETS.md` |
 | Ansible backup playbooks | `docs/BACKUPS.md` |
+| `home-assistant/` config, HA deploy playbook | `docs/OPERATIONS.md` |
 
 Claude Code users: run `/update-docs` to auto-detect and apply.

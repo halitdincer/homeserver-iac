@@ -30,11 +30,38 @@ All use `-i ~/.ssh/id_ed25519`:
 | Immich VM | `root@10.10.10.100` |
 | devbox | `dincer@10.10.10.106` |
 
-VM 103 (Home Assistant): no SSH — HAOS only, REST API port 8123.
+| Home Assistant | `root@10.10.10.103` (port 22, via Proxmox jump host) |
+
+HA SSH requires "Advanced SSH & Web Terminal" add-on. Connect via jump host:
+```bash
+ssh -J root@100.117.57.21 -p 22 root@10.10.10.103
+```
 
 ## Coder Templates (`k3s-manifests/coder-templates/`)
 
 homeserver-iac, job-scout-dev, flight-tracker-dev, home-assistant-dev, personal-site-dev, kubernetes, python-scratch
+
+## Home Assistant Config (`home-assistant/`)
+
+Configuration is managed as code and deployed via Ansible:
+
+```bash
+# Deploy config (syncs files, validates, restarts if changed)
+ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/deploy-ha-config.yml
+
+# Dry run (see what would change)
+ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/deploy-ha-config.yml --check --diff
+```
+
+| File | Purpose |
+|------|---------|
+| `configuration.yaml` | Core config (http, trusted_proxies, includes) |
+| `automations.yaml` | Automation rules |
+| `scripts.yaml` | Script sequences |
+| `scenes.yaml` | Scene definitions |
+| `packages/` | Modular config bundles (e.g. climate.yaml, lighting.yaml) |
+
+**Note:** Device pairings, integrations, entity registry, and add-on installs are UI-only — not managed here.
 
 ## Common Commands
 
