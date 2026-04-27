@@ -5,8 +5,9 @@
 | ArgoCD App | Path / Source | Purpose |
 |------------|--------------|---------|
 | `infrastructure` | `k3s-manifests/infrastructure/` | nginx ingress, ClusterIssuers, wildcard cert, CSStore, image-updater |
-| `apps` | `k3s-manifests/apps/` | Atlantis, Coder, monitoring (single-file manifests) |
+| `apps` | `k3s-manifests/apps/` | Coder, monitoring (single-file manifests) |
 | `homepage` | `k3s-manifests/apps/homepage/` (Helm: jameswynn/homepage@2.1.0) | Homepage dashboard (wrapper chart + custom templates) |
+| `atlantis` | `k3s-manifests/apps/atlantis/` (Helm: runatlantis/atlantis@6.3.0, image v0.31.0) | Atlantis Terraform GitOps (wrapper chart + custom templates) |
 | `ingresses` | `k3s-manifests/ingresses/` | Ingress resources for `apps`-tier services |
 | `job-scout` | `k3s-manifests/job-scout/` | job-scout (kustomize) |
 | `vault` | Helm: hashicorp/vault@0.29.1 | Vault (standalone Raft) |
