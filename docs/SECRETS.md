@@ -16,6 +16,7 @@ Never use `kubectl create secret` or SealedSecrets for app secrets (SealedSecret
 | coder (homeserver-iac workspace) | `secret/coder/homeserver-iac` | `homeserver-iac-secret` | coder |
 | coder (home-assistant workspace) | `secret/coder/home-assistant` | `home-assistant-secret` | coder |
 | homepage | `secret/homepage/config` | `homepage-secret` | default |
+| cert-manager (Cloudflare DNS-01) | `secret/cert-manager/config` (key: `cloudflare-api-token`) | `cloudflare-api-token` | cert-manager |
 
 ## Read / Write Commands
 

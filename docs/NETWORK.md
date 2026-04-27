@@ -47,6 +47,20 @@ Namecheap (registrar) -> Cloudflare NS (`daphne` + `kellen`) -> Cloudflare DNS r
 
 nginx-ingress on K3s (`10.10.10.105:80/443`) handles both tunnel and Tailscale traffic. ConfigMap sets `use-forwarded-headers: "true"` to trust Cloudflare's `X-Forwarded-Proto` (prevents redirect loops).
 
+## TLS Certificates
+
+Single wildcard cert `*.halitdincer.com` (+ apex) covers every public subdomain. Issued by Let's Encrypt via cert-manager using **Cloudflare DNS-01**.
+
+| Component | Detail |
+|-----------|--------|
+| Certificate | `wildcard-halitdincer` in `ingress-nginx` namespace -> Secret `wildcard-halitdincer-tls` |
+| ClusterIssuer | `letsencrypt-prod-dns01` (DNS-01 solver, Cloudflare provider) |
+| Cloudflare API token | Vault `secret/cert-manager/config` -> ESO -> Secret `cloudflare-api-token` in `cert-manager` ns. Scope: `Zone:DNS:Edit` + `Zone:Zone:Read` on `halitdincer.com` only |
+| Default cert | nginx-ingress controller arg `--default-ssl-certificate=ingress-nginx/wildcard-halitdincer-tls` makes the wildcard the fallback for every host |
+| Renewal | Auto, 15 days before expiry (90-day cert) |
+
+Adding a new subdomain: just create the Ingress with `host: foo.halitdincer.com`. No `cert-manager.io/cluster-issuer` annotation, no `spec.tls` block — wildcard is inherited automatically.
+
 ## Network Recovery (auto-failover)
 
 Connection priority: LAN (`nic0`, metric 100) > WiFi (`wlp3s0`, metric 200) > Recovery
