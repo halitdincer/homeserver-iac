@@ -4,7 +4,7 @@
 
 | ArgoCD App | Path / Source | Purpose |
 |------------|--------------|---------|
-| `infrastructure` | `k3s-manifests/infrastructure/` | nginx ingress, cert-manager, CSStore |
+| `infrastructure` | `k3s-manifests/infrastructure/` | nginx ingress, ClusterIssuers, wildcard cert, CSStore, image-updater |
 | `apps` | `k3s-manifests/apps/` | Atlantis, Coder, homepage, monitoring |
 | `ingresses` | `k3s-manifests/ingresses/` | All Ingress resources |
 | `job-scout` | `k3s-manifests/job-scout/` | job-scout (kustomize) |
@@ -92,6 +92,7 @@ ArgoCD: argocd.halitdincer.com | Atlantis: atlantis.halitdincer.com | Grafana: g
 ## Adding a New K3s App
 
 1. Store secrets in Vault
-2. Create `ExternalSecret` + Deployment/Service/Ingress in `k3s-manifests/apps/`
-3. Add `Application` YAML to `k3s-manifests/argocd-apps/`; `kubectl apply` once
-4. Push to `main` — ArgoCD deploys, ESO syncs secrets
+2. Create `ExternalSecret` + Deployment/Service in `k3s-manifests/apps/`
+3. Create Ingress in `k3s-manifests/ingresses/` — `host: foo.halitdincer.com`, no TLS config needed (the wildcard cert covers it; see NETWORK.md §TLS)
+4. Add `Application` YAML to `k3s-manifests/argocd-apps/`; `kubectl apply` once
+5. Push to `main` — ArgoCD deploys, ESO syncs secrets

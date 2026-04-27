@@ -65,7 +65,7 @@ kubectl rollout restart deployment -n external-secrets
 
 **Checklist:**
 - Ingress exists: `kubectl get ingress --all-namespaces`
-- TLS cert issued: `kubectl get certificate --all-namespaces`
+- Wildcard cert healthy: `kubectl get certificate -n ingress-nginx wildcard-halitdincer` (READY=True)
 - DNS record points to correct IP: `dig photos.halitdincer.com`
 - Public access via Cloudflare Tunnel (no port forwarding needed)
 
