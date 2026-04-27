@@ -52,6 +52,8 @@ atlantis:
   vcsSecretName: atlantis-env
 
   extraArgs:
+    # GH user is a literal (not in Vault). Token + webhook secret come from atlantis-env env vars.
+    - --gh-user=halitdincer
     - --write-git-creds
 
   test:
