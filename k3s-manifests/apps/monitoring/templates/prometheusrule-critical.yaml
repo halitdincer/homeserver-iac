@@ -1,0 +1,38 @@
+---
+# Critical homeserver alerts ported from the previous Grafana alerting config.
+# Routed by Alertmanager (see values.yaml alertmanager.config) → ntfy-relay → ntfy.sh.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: homeserver-critical
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: homeserver-critical
+      rules:
+        - alert: DiskFull
+          expr: |
+            (1 - node_filesystem_avail_bytes{fstype!="tmpfs",mountpoint="/"} / node_filesystem_size_bytes) * 100 > 95
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: Disk almost full
+            description: '{{`{{ $labels.instance }}`}} root filesystem >95% full.'
+        - alert: MemoryCritical
+          expr: |
+            (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 95
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Memory almost exhausted
+            description: '{{`{{ $labels.instance }}`}} memory usage >95%.'
+        - alert: ProxmoxHostDown
+          expr: up{job="proxmox-host"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Proxmox host unreachable
+            description: Proxmox node_exporter at 10.10.10.1:9100 not responding.

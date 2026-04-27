@@ -1,0 +1,117 @@
+kube-prometheus-stack:
+  # Short prefix keeps generated resource names manageable.
+  fullnameOverride: kps
+
+  # Let the chart manage Prometheus operator CRDs (Prometheus, Alertmanager,
+  # ServiceMonitor, PodMonitor, PrometheusRule, Probe, AlertmanagerConfig,
+  # ScrapeConfig). ServerSideApply=true on the ArgoCD Application is required
+  # because some CRDs exceed the 256 KB client-side annotation limit.
+  crds:
+    enabled: true
+
+  prometheus:
+    prometheusSpec:
+      retention: 15d
+      retentionSize: 4GiB
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: local-path
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 5Gi
+      # Discover ServiceMonitor / PodMonitor / PrometheusRule / Probe in any
+      # namespace without label-selector ceremony — homelab, no multi-tenant.
+      serviceMonitorSelectorNilUsesHelmValues: false
+      podMonitorSelectorNilUsesHelmValues: false
+      ruleSelectorNilUsesHelmValues: false
+      probeSelectorNilUsesHelmValues: false
+      # External Proxmox host node_exporter target (10.10.10.1:9100).
+      additionalScrapeConfigs:
+        - job_name: proxmox-host
+          static_configs:
+            - targets: ["10.10.10.1:9100"]
+              labels:
+                instance: proxmox
+                job: node
+
+  alertmanager:
+    alertmanagerSpec:
+      storage:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: local-path
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 1Gi
+    config:
+      route:
+        receiver: ntfy-relay
+        group_by: ["alertname"]
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 4h
+        routes:
+          # Watchdog is a permanently-firing alert from kube-prometheus-stack used
+          # to verify alerting pipelines via dead-man's-switch tools. We don't run
+          # one, so route it to null instead of paging ntfy.
+          - matchers:
+              - alertname = "Watchdog"
+            receiver: "null"
+      receivers:
+        - name: "null"
+        - name: ntfy-relay
+          webhook_configs:
+            - url: http://ntfy-relay.monitoring.svc.cluster.local:8080
+              send_resolved: true
+
+  grafana:
+    enabled: true
+    # Admin creds come from the Vault-backed grafana-admin Secret created by
+    # the ExternalSecret in templates/grafana-admin-secret.yaml.
+    admin:
+      existingSecret: grafana-admin
+      userKey: admin-user
+      passwordKey: admin-password
+    persistence:
+      enabled: true
+      storageClassName: local-path
+      size: 2Gi
+    grafana.ini:
+      server:
+        root_url: https://grafana.halitdincer.com
+      analytics:
+        reporting_enabled: false
+        check_for_updates: false
+    sidecar:
+      dashboards:
+        enabled: true
+        searchNamespace: ALL
+      datasources:
+        enabled: true
+    # We ship our own ingress (consistent with other Helm wrappers in this repo).
+    ingress:
+      enabled: false
+    service:
+      type: ClusterIP
+
+  nodeExporter:
+    enabled: true
+  kubeStateMetrics:
+    enabled: true
+
+  # k3s control-plane: only the API server is independently scrapable.
+  # controller-manager, scheduler, etcd are embedded in the k3s server binary
+  # and not exposed as separate metrics endpoints. kube-proxy is not deployed.
+  kubeApiServer:
+    enabled: true
+  kubeControllerManager:
+    enabled: false
+  kubeScheduler:
+    enabled: false
+  kubeProxy:
+    enabled: false
+  kubeEtcd:
+    enabled: false

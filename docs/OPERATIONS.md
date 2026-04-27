@@ -5,9 +5,10 @@
 | ArgoCD App | Path / Source | Purpose |
 |------------|--------------|---------|
 | `infrastructure` | `k3s-manifests/infrastructure/` | nginx ingress, ClusterIssuers, wildcard cert, CSStore, image-updater |
-| `apps` | `k3s-manifests/apps/` | Coder, monitoring (single-file manifests) |
+| `apps` | `k3s-manifests/apps/` | Coder, single-file manifests for the remaining hand-rolled services |
 | `homepage` | `k3s-manifests/apps/homepage/` (Helm: jameswynn/homepage@2.1.0) | Homepage dashboard (wrapper chart + custom templates) |
 | `atlantis` | `k3s-manifests/apps/atlantis/` (Helm: runatlantis/atlantis@6.3.0, image v0.31.0) | Atlantis Terraform GitOps (wrapper chart + custom templates) |
+| `monitoring` | `k3s-manifests/apps/monitoring/` (Helm: prometheus-community/kube-prometheus-stack@84.3.0) | Prometheus + Alertmanager + Grafana + node-exporter + kube-state-metrics + ntfy-relay (wrapper chart + critical PrometheusRule) |
 | `ingresses` | `k3s-manifests/ingresses/` | Ingress resources for `apps`-tier services |
 | `job-scout` | `k3s-manifests/job-scout/` | job-scout (kustomize) |
 | `vault` | Helm: hashicorp/vault@0.29.1 | Vault (standalone Raft) |
@@ -109,3 +110,34 @@ ArgoCD: argocd.halitdincer.com | Atlantis: atlantis.halitdincer.com | Grafana: g
 4. Add wrapper resources (Ingress, ExternalSecret, ConfigMap, RBAC) under `templates/` — these stay verbatim across chart bumps
 5. Add a dedicated `Application` YAML in `k3s-manifests/argocd-apps/` with `path: k3s-manifests/apps/<app>` (ArgoCD auto-runs `helm dependency build`); `kubectl apply` once
 6. Push to `main`
+
+## Adding Metrics / Alerts to a K3s App
+
+The `monitoring` app installs Prometheus operator with cluster-wide CRD discovery
+(`serviceMonitorSelectorNilUsesHelmValues: false` etc.), so any namespace can
+declare metrics scraping and alerts inline:
+
+1. Expose `/metrics` from your app (HTTP handler on a known port, no auth).
+2. Add a `ServiceMonitor` next to the app's `Service`:
+   ```yaml
+   apiVersion: monitoring.coreos.com/v1
+   kind: ServiceMonitor
+   metadata:
+     name: <app>
+     namespace: <app-ns>
+   spec:
+     selector:
+       matchLabels: { app: <app> }
+     endpoints:
+       - port: http        # named port on the Service
+         path: /metrics
+         interval: 30s
+   ```
+   Prometheus picks it up within ~1 sync cycle. Targets visible at `prometheus.halitdincer.com/targets`.
+3. (Optional) Add a `PrometheusRule` in the same namespace with alerts; Alertmanager
+   routes them to ntfy-relay → ntfy.sh per the receiver config in `apps/monitoring/values.yaml`.
+4. (Optional) Drop a Grafana dashboard JSON into a ConfigMap with label
+   `grafana_dashboard: "1"` in any namespace; the Grafana sidecar imports it.
+
+External (non-K8s) targets like Proxmox host live in `additionalScrapeConfigs`
+inside `apps/monitoring/values.yaml`.
