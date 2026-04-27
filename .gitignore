@@ -33,3 +33,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Helm — chart deps fetched by ArgoCD's `helm dependency build` from Chart.lock
+k3s-manifests/apps/*/charts/

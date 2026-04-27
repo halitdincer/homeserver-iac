@@ -1,0 +1,133 @@
+---
+# Dashboard config files. Mounted by the upstream chart's Deployment via
+# values.config.useExistingConfigMap=homepage-config.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homepage-config
+  namespace: {{ .Release.Namespace }}
+data:
+  settings.yaml: |
+    title: Halit's Homeserver
+    favicon: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/home-assistant.png
+    headerStyle: clean
+    disableSSLVerification: true
+    layout:
+      Services:
+        style: row
+        columns: 3
+      Personal:
+        style: row
+        columns: 2
+      Infrastructure:
+        style: row
+        columns: 4
+
+  bookmarks.yaml: |
+    []
+
+  services.yaml: |
+    - Services:
+        - Immich:
+            icon: immich.png
+            href: https://photos.halitdincer.com
+            description: Photo Management
+            widget:
+              type: immich
+              url: http://10.10.10.100:2283
+              key: "{{`{{HOMEPAGE_VAR_IMMICH_API_KEY}}`}}"
+              version: 2
+        - Home Assistant:
+            icon: home-assistant.png
+            href: https://ha.halitdincer.com
+            description: Smart Home
+            widget:
+              type: homeassistant
+              url: http://10.10.10.103:8123
+              key: "{{`{{HOMEPAGE_VAR_HA_TOKEN}}`}}"
+        - Code Server:
+            icon: vscode.png
+            href: https://code.halitdincer.com
+            description: VS Code in Browser
+        - Status:
+            icon: gatus.png
+            href: https://status.halitdincer.com
+            description: Uptime Monitoring
+
+    - Personal:
+        - Job Scout:
+            icon: mdi-briefcase-search
+            href: https://jobs.halitdincer.com
+            description: Job Board Tracker
+        - Flight Tracker:
+            icon: mdi-airplane
+            href: https://flights.halitdincer.com
+            description: Live Flight Map
+        - Lyra:
+            icon: openai.png
+            href: http://openclaw.halitdincer.com:18789
+            description: AI Assistant (Tailscale)
+
+    - Infrastructure:
+        - ArgoCD:
+            icon: argo-cd.png
+            href: https://argocd.halitdincer.com
+            description: GitOps Deployments
+        - Grafana:
+            icon: grafana.png
+            href: https://grafana.halitdincer.com
+            description: Metrics Dashboards
+        - Prometheus:
+            icon: prometheus.png
+            href: https://prometheus.halitdincer.com
+            description: Metrics Collection
+        - Vault:
+            icon: vault.png
+            href: http://vault.halitdincer.com
+            description: Secrets Manager
+        - Atlantis:
+            icon: terraform.png
+            href: https://atlantis.halitdincer.com
+            description: Terraform GitOps
+        - Proxmox:
+            icon: proxmox.png
+            href: http://proxmox.halitdincer.com
+            description: Hypervisor
+            widget:
+              type: proxmox
+              url: https://10.10.10.1:8006
+              username: "{{`{{HOMEPAGE_VAR_PROXMOX_TOKEN_ID}}`}}"
+              password: "{{`{{HOMEPAGE_VAR_PROXMOX_TOKEN_SECRET}}`}}"
+              node: pve1
+
+  widgets.yaml: |
+    - kubernetes:
+        cluster:
+          show: true
+          cpu: true
+          memory: true
+          nodes: true
+          pods: true
+          showLabel: true
+          label: "K3s Cluster"
+        nodes:
+          show: true
+          cpu: true
+          memory: true
+          pods: true
+          showLabel: true
+
+    - datetime:
+        text_size: xl
+        format:
+          dateStyle: long
+          timeStyle: short
+
+  kubernetes.yaml: |
+    mode: cluster
+
+  docker.yaml: |
+    []
+
+  custom.css: ""
+  custom.js: ""

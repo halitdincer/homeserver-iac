@@ -1,0 +1,41 @@
+# Overrides for the upstream jameswynn/homepage chart.
+# Anything not set here uses the chart's defaults.
+homepage:
+  # Pin the image — replaces the previous :latest. Bumped by Renovate.
+  image:
+    repository: ghcr.io/gethomepage/homepage
+    tag: "v1.2.0"
+
+  # Our ServiceAccount + ClusterRole + ClusterRoleBinding live in
+  # templates/rbac.yaml so we keep exact control of the rules. The
+  # chart's deployment just references the SA by name.
+  enableRbac: false
+  serviceAccount:
+    create: false
+    name: homepage
+
+  # We provide our own ingress at templates/ingress.yaml.
+  ingress:
+    main:
+      enabled: false
+
+  service:
+    main:
+      ports:
+        http:
+          port: 3000
+
+  # Use the existing ConfigMap rendered from templates/configmap.yaml
+  # (preserves the dashboard layout, services, widgets verbatim).
+  config:
+    useExistingConfigMap: homepage-config
+
+  # Single env var; the rest come from the secret via envFrom.
+  env:
+    - name: HOMEPAGE_ALLOWED_HOSTS
+      value: "home.halitdincer.com"
+
+  # ExternalSecret -> homepage-secret (managed by templates/external-secret.yaml).
+  envFrom:
+    - secretRef:
+        name: homepage-secret
