@@ -60,6 +60,9 @@ spec:
         - --ingress-class=nginx
         - --configmap=$(POD_NAMESPACE)/ingress-nginx-controller
         - --publish-status-address=localhost
+        # Default SSL cert: every ingress under *.halitdincer.com inherits this
+        # wildcard automatically (no per-ingress tls.secretName needed).
+        - --default-ssl-certificate=ingress-nginx/wildcard-halitdincer-tls
         env:
         - name: POD_NAME
           valueFrom:
