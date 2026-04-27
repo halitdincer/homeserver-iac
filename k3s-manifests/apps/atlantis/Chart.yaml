@@ -1,0 +1,10 @@
+apiVersion: v2
+name: atlantis-wrapper
+description: Wrapper around runatlantis/atlantis with our ingress, ExternalSecret, and repo config.
+type: application
+version: 0.1.0
+appVersion: "0.31.0"
+dependencies:
+  - name: atlantis
+    version: "6.3.0"
+    repository: https://runatlantis.github.io/helm-charts

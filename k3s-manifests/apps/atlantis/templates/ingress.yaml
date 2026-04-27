@@ -1,10 +1,13 @@
+---
 # Atlantis - Terraform GitOps server
 # Domain: atlantis.halitdincer.com
+# Webhook: POST https://atlantis.halitdincer.com/events
+# TLS comes from nginx default-ssl-certificate (wildcard).
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: atlantis
-  namespace: atlantis
+  namespace: {{ .Release.Namespace }}
   annotations:
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 spec:

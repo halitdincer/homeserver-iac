@@ -1,0 +1,76 @@
+atlantis:
+  fullnameOverride: atlantis
+
+  image:
+    repository: ghcr.io/runatlantis/atlantis
+    # Pin to current running version. Bump separately after reading
+    # v0.31 -> chart-current changelog (Renovate may auto-PR this).
+    tag: "v0.31.0"
+    pullPolicy: IfNotPresent
+
+  # Mirror current data-dir path so container internals don't shift unexpectedly.
+  # Standalone PVC (chart names it `atlantis-data`) is mounted here.
+  atlantisDataDirectory: /atlantis-home
+
+  volumeClaim:
+    enabled: true
+    dataStorage: 5Gi
+    storageClassName: local-path
+    accessModes: ["ReadWriteOnce"]
+
+  containerPort: 4141
+  service:
+    type: ClusterIP
+    port: 4141
+    targetPort: 4141
+
+  serviceAccount:
+    create: true
+    name: atlantis
+
+  # We provide our own ingress in templates/, keep chart's disabled.
+  ingress:
+    enabled: false
+
+  atlantisUrl: https://atlantis.halitdincer.com
+  orgAllowlist: github.com/halitdincer/homeserver-iac
+  defaultTFVersion: "1.5.7"
+
+  # Was: --repo-config-json='{"repos":[{"id":"/.*/","allowed_overrides":["workflow"],"allow_custom_workflows":true}]}'
+  # Chart renders this as a ConfigMap mounted at /etc/atlantis/repos.yaml and sets ATLANTIS_REPO_CONFIG.
+  repoConfig: |
+    repos:
+      - id: /.*/
+        allowed_overrides: [workflow]
+        allow_custom_workflows: true
+
+  # Vault-backed atlantis-env secret provides ATLANTIS_GH_USER, ATLANTIS_GH_TOKEN, ATLANTIS_GH_WEBHOOK_SECRET.
+  loadEnvFromSecrets:
+    - atlantis-env
+
+  # Tells the chart not to render an empty webhook Secret (we manage VCS creds via Vault/ExternalSecret).
+  vcsSecretName: atlantis-env
+
+  extraArgs:
+    - --write-git-creds
+
+  test:
+    enabled: false
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    failureThreshold: 3
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 10
