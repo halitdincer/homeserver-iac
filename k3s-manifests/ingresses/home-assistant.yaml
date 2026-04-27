@@ -8,8 +8,6 @@ metadata:
   name: home-assistant
   namespace: default
   annotations:
-    # Automatic SSL certificate from Let's Encrypt
-    cert-manager.io/cluster-issuer: letsencrypt-prod
     # Force HTTPS redirect
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     # WebSocket support for Home Assistant
@@ -19,11 +17,6 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 spec:
   ingressClassName: nginx
-  tls:
-  - hosts:
-    - ha.halitdincer.com
-    - homeassistant.halitdincer.com
-    secretName: home-assistant-tls
   rules:
   - host: ha.halitdincer.com
     http:

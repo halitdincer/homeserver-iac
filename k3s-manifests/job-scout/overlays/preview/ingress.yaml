@@ -3,7 +3,6 @@ kind: Ingress
 metadata:
   name: job-scout-preview
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 spec:
   ingressClassName: nginx
@@ -18,7 +17,3 @@ spec:
                 name: job-scout
                 port:
                   number: 8000
-  tls:
-    - hosts:
-        - preview.jobs.halitdincer.com
-      secretName: job-scout-preview-tls

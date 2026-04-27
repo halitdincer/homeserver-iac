@@ -4,17 +4,12 @@ metadata:
   name: coder
   namespace: coder
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "86400"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "86400"
     nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
 spec:
   ingressClassName: nginx
-  tls:
-  - hosts:
-    - code.halitdincer.com
-    secretName: coder-tls
   rules:
   - host: code.halitdincer.com
     http:

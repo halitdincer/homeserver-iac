@@ -6,7 +6,6 @@ metadata:
   name: job-scout
   namespace: job-scout
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
 spec:
@@ -22,7 +21,3 @@ spec:
                 name: job-scout
                 port:
                   number: 8000
-  tls:
-    - hosts:
-        - jobs.halitdincer.com
-      secretName: job-scout-tls

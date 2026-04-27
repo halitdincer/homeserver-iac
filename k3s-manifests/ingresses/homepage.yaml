@@ -7,14 +7,9 @@ metadata:
   name: homepage
   namespace: default
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 spec:
   ingressClassName: nginx
-  tls:
-  - hosts:
-    - home.halitdincer.com
-    secretName: homepage-tls
   rules:
   - host: home.halitdincer.com
     http:

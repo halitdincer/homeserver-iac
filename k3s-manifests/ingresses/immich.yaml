@@ -8,8 +8,6 @@ metadata:
   name: immich
   namespace: default
   annotations:
-    # Automatic SSL certificate from Let's Encrypt
-    cert-manager.io/cluster-issuer: letsencrypt-prod
     # Force HTTPS redirect
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     # Large file uploads for photos
@@ -20,10 +18,6 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
 spec:
   ingressClassName: nginx
-  tls:
-  - hosts:
-    - photos.halitdincer.com
-    secretName: immich-tls
   rules:
   - host: photos.halitdincer.com
     http:

@@ -7,14 +7,9 @@ metadata:
   name: teslamate
   namespace: teslamate
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 spec:
   ingressClassName: nginx
-  tls:
-  - hosts:
-    - teslamate.halitdincer.com
-    secretName: teslamate-tls
   rules:
   - host: teslamate.halitdincer.com
     http:
@@ -36,14 +31,9 @@ metadata:
   name: teslamate-grafana
   namespace: teslamate
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 spec:
   ingressClassName: nginx
-  tls:
-  - hosts:
-    - teslamate-grafana.halitdincer.com
-    secretName: teslamate-grafana-tls
   rules:
   - host: teslamate-grafana.halitdincer.com
     http:

@@ -5,14 +5,9 @@ metadata:
   name: gatus
   namespace: default
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 spec:
   ingressClassName: nginx
-  tls:
-    - hosts:
-        - status.halitdincer.com
-      secretName: gatus-tls
   rules:
     - host: status.halitdincer.com
       http:

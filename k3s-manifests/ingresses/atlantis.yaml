@@ -6,7 +6,6 @@ metadata:
   name: atlantis
   namespace: atlantis
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 spec:
   ingressClassName: nginx
@@ -21,7 +20,3 @@ spec:
                 name: atlantis
                 port:
                   number: 4141
-  tls:
-    - hosts:
-        - atlantis.halitdincer.com
-      secretName: atlantis-tls
