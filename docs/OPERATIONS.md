@@ -5,8 +5,9 @@
 | ArgoCD App | Path / Source | Purpose |
 |------------|--------------|---------|
 | `infrastructure` | `k3s-manifests/infrastructure/` | nginx ingress, ClusterIssuers, wildcard cert, CSStore, image-updater |
-| `apps` | `k3s-manifests/apps/` | Atlantis, Coder, homepage, monitoring |
-| `ingresses` | `k3s-manifests/ingresses/` | All Ingress resources |
+| `apps` | `k3s-manifests/apps/` | Atlantis, Coder, monitoring (single-file manifests) |
+| `homepage` | `k3s-manifests/apps/homepage/` (Helm: jameswynn/homepage@2.1.0) | Homepage dashboard (wrapper chart + custom templates) |
+| `ingresses` | `k3s-manifests/ingresses/` | Ingress resources for `apps`-tier services |
 | `job-scout` | `k3s-manifests/job-scout/` | job-scout (kustomize) |
 | `vault` | Helm: hashicorp/vault@0.29.1 | Vault (standalone Raft) |
 | `external-secrets` | Helm: external-secrets@0.14.0 | ESO |
@@ -91,8 +92,19 @@ ArgoCD: argocd.halitdincer.com | Atlantis: atlantis.halitdincer.com | Grafana: g
 
 ## Adding a New K3s App
 
+**Hand-rolled (no upstream chart):**
+
 1. Store secrets in Vault
 2. Create `ExternalSecret` + Deployment/Service in `k3s-manifests/apps/`
 3. Create Ingress in `k3s-manifests/ingresses/` — `host: foo.halitdincer.com`, no TLS config needed (the wildcard cert covers it; see NETWORK.md §TLS)
 4. Add `Application` YAML to `k3s-manifests/argocd-apps/`; `kubectl apply` once
 5. Push to `main` — ArgoCD deploys, ESO syncs secrets
+
+**Wrapping an upstream Helm chart** (preferred when one exists — see `k3s-manifests/apps/homepage/` as the canonical example):
+
+1. Create `k3s-manifests/apps/<app>/Chart.yaml` with the upstream chart pinned under `dependencies:`
+2. Run `helm dependency build` once locally to generate `Chart.lock` (commit it; `charts/` is gitignored — ArgoCD re-fetches via the lock)
+3. Override defaults in `values.yaml` (pin image tag — Renovate will bump it)
+4. Add wrapper resources (Ingress, ExternalSecret, ConfigMap, RBAC) under `templates/` — these stay verbatim across chart bumps
+5. Add a dedicated `Application` YAML in `k3s-manifests/argocd-apps/` with `path: k3s-manifests/apps/<app>` (ArgoCD auto-runs `helm dependency build`); `kubectl apply` once
+6. Push to `main`
