@@ -19,6 +19,20 @@
 | ArgoCD | Push to `main` → auto-sync (~3 min) | Never `kubectl apply` directly |
 | Ansible | Manual CLI only | `ansible-playbook -i ansible/inventory/hosts.yml ...` |
 
+## Repo Tooling
+
+| Tool | Config | Purpose |
+|------|--------|---------|
+| Renovate | `renovate.json` | Weekly grouped PRs for Terraform providers, GitHub Actions, and pinned container images. Schedule: Monday before 8am PT. No auto-merge. |
+| Gitleaks (pre-commit) | `.pre-commit-config.yaml` | Blocks commits containing secrets locally. Setup once: `brew install pre-commit && pre-commit install`. |
+| Gitleaks (CI) | `.github/workflows/gitleaks.yml` | Same scan in CI on every PR + push to `main` — catches anyone bypassing the local hook. |
+| Terraform lint | `.github/workflows/lint.yml` | `tflint` + `terraform validate` on changes under `terraform/`. |
+
+Notes:
+- Renovate cannot bump `:latest` image tags. Pin tags when adding new manifests.
+- Renovate GitHub App must be installed at the repo level (one-time, browser-only step).
+- Run `pre-commit run gitleaks --all-files` to scan full history on demand.
+
 ## SSH Access
 
 All use `-i ~/.ssh/id_ed25519`:
