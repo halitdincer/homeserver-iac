@@ -1,7 +1,10 @@
 ---
 # Grafana - Metrics Dashboards
 # Domain: grafana.halitdincer.com
-# Backend service is the chart-rendered kps-grafana on port 80.
+# Backend service is the chart-rendered monitoring-grafana on port 80.
+# Grafana is a subchart of kube-prometheus-stack; the top-level
+# fullnameOverride: kps does not apply to subchart resources, so the
+# Service is named <release>-grafana = monitoring-grafana.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -23,6 +26,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: kps-grafana
+                name: monitoring-grafana
                 port:
                   number: 80
