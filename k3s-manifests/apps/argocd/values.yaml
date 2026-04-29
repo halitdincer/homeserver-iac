@@ -161,6 +161,11 @@ argo-cd:
     # Current install runs argocd-server with TLS (port 443 in the Service); preserve that.
     params:
       server.insecure: false
+      # Delegate diff calculation to the apiserver via dry-run apply. Eliminates the
+      # entire class of "apiserver-defaulted field" drift (dnsPolicy, restartPolicy,
+      # persistentVolumeClaimRetentionPolicy, terminationMessagePolicy, etc.) that
+      # otherwise keeps charts like vault permanently OutOfSync. Requires ArgoCD 2.10+.
+      controller.diff.server.side: "true"
 
 
   # Each component exposes Prometheus metrics on a sidecar port; enabling the
