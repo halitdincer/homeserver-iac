@@ -137,7 +137,7 @@ argo-cd:
     # the existing relay's topic so notifications land in the same phone subscription.
     notifiers:
       service.webhook.ntfy: |
-        url: https://ntfy.sh
+        url: https://ntfy.sh/halitdincer-homeserver
         headers:
         - name: Content-Type
           value: text/plain
@@ -146,7 +146,6 @@ argo-cd:
         webhook:
           ntfy:
             method: POST
-            path: /halitdincer-homeserver
             body: |
               {{.app.metadata.name}}: {{.app.status.operationState.message}}
               {{.context.argocdUrl}}/applications/{{.app.metadata.name}}
@@ -161,7 +160,6 @@ argo-cd:
         webhook:
           ntfy:
             method: POST
-            path: /halitdincer-homeserver
             body: |
               {{.app.metadata.name}} is Degraded
               {{.context.argocdUrl}}/applications/{{.app.metadata.name}}
@@ -182,9 +180,11 @@ argo-cd:
           send: [app-health-degraded]
           when: app.status.health.status == 'Degraded'
     # Global default subscription — applies to ALL Applications without per-app annotations.
+    # Recipient is the webhook *name* (not `webhook:ntfy`); the engine keys named
+    # services by name, so `service.webhook.ntfy` is dispatched as recipient `ntfy`.
     subscriptions:
       - recipients:
-          - webhook:ntfy
+          - ntfy
         triggers:
           - on-sync-failed
           - on-health-degraded
