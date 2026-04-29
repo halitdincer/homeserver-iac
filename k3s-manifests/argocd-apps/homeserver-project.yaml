@@ -50,6 +50,9 @@ spec:
     # job-scout preview AppSet creates per-PR namespaces.
     - server: https://kubernetes.default.svc
       namespace: job-scout-preview-*
+    # kube-prometheus-stack puts a CoreDNS metrics Service in kube-system.
+    - server: https://kubernetes.default.svc
+      namespace: kube-system
     - server: https://kubernetes.default.svc
       namespace: monitoring
     - server: https://kubernetes.default.svc
