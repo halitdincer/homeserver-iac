@@ -1,0 +1,68 @@
+---
+# Generates Application objects for repo-path-sourced workloads (no Helm chart on the
+# Application — `path` points at a directory in this repo). Adopts existing Applications
+# of the same name on first apply by setting an ownerReference on them.
+#
+# Add a new app: append a list entry below. Remove an app: delete the entry (the AppSet
+# controller will delete the Application; resources prune via the Application's own
+# prune: true). Apps that need custom annotations (e.g. image-updater config),
+# ignoreDifferences, prune: false, or ServerSideApply stay as standalone Application
+# files in this directory — see argocd-self-app.yaml, monitoring-app.yaml,
+# job-scout-app.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: git-path-apps
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  # Don't prune the underlying Applications (and their resources) if this AppSet is ever
+  # deleted. Recovering from an accidental AppSet delete should not require restoring
+  # every workload.
+  syncPolicy:
+    preserveResourcesOnDeletion: true
+  generators:
+    - list:
+        elements:
+          - name: apps
+            path: k3s-manifests/apps
+            namespace: default
+          - name: atlantis
+            path: k3s-manifests/apps/atlantis
+            namespace: atlantis
+          - name: flight-tracker
+            path: k3s-manifests/flight-tracker
+            namespace: flight-tracker
+          - name: homepage
+            path: k3s-manifests/apps/homepage
+            namespace: default
+          - name: infrastructure
+            path: k3s-manifests/infrastructure
+            namespace: default
+          - name: ingresses
+            path: k3s-manifests/ingresses
+            namespace: default
+          - name: personal-site
+            path: k3s-manifests/personal-site
+            namespace: personal-site
+  template:
+    metadata:
+      name: '{{.name}}'
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: git@github.com:halitdincer/homeserver-iac.git
+        targetRevision: main
+        path: '{{.path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{.namespace}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+          allowEmpty: false
+        syncOptions:
+          - CreateNamespace=true

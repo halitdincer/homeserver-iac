@@ -1,0 +1,129 @@
+---
+# Generates Application objects for upstream Helm charts (each entry below carries its
+# own repo, chart, version, and inline values). Adopts existing Applications of the
+# same name on first apply by setting an ownerReference on them.
+#
+# Add a new app: append a list entry. Remove an app: delete the entry. Use a wrapper
+# chart under k3s-manifests/apps/<name>/ if you need to template additional resources
+# alongside the upstream chart (see homepage, atlantis, monitoring, argocd).
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: helm-charts
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  syncPolicy:
+    preserveResourcesOnDeletion: true
+  generators:
+    - list:
+        elements:
+          - name: coder
+            namespace: coder
+            repoURL: https://helm.coder.com/v2
+            chart: coder
+            targetRevision: "2.30.1"
+            values: |
+              coder:
+                env:
+                  - name: CODER_ACCESS_URL
+                    value: "https://code.halitdincer.com"
+                  - name: CODER_POSTGRESQL_CONNECTION_URL
+                    valueFrom:
+                      secretKeyRef:
+                        name: coder-secret
+                        key: CODER_POSTGRESQL_CONNECTION_URL
+                resources:
+                  requests:
+                    cpu: 250m
+                    memory: 512Mi
+                  limits:
+                    cpu: 2000m
+                    memory: 2Gi
+                service:
+                  type: ClusterIP
+          - name: coder-postgres
+            namespace: coder
+            repoURL: https://charts.bitnami.com/bitnami
+            chart: postgresql
+            targetRevision: "18.2.0"
+            values: |
+              auth:
+                username: coder
+                database: coder
+                existingSecret: coder-secret
+                secretKeys:
+                  userPasswordKey: postgres-password
+              primary:
+                persistence:
+                  size: 10Gi
+                  storageClass: local-path
+                resources:
+                  requests:
+                    cpu: 250m
+                    memory: 512Mi
+                  limits:
+                    cpu: 1000m
+                    memory: 1Gi
+          - name: external-secrets
+            namespace: external-secrets
+            repoURL: https://charts.external-secrets.io
+            chart: external-secrets
+            targetRevision: "0.14.0"
+            values: |
+              installCRDs: true
+          - name: vault
+            namespace: vault
+            repoURL: https://helm.releases.hashicorp.com
+            chart: vault
+            targetRevision: "0.29.1"
+            values: |
+              global:
+                enabled: true
+              injector:
+                enabled: false
+              server:
+                standalone:
+                  enabled: true
+                  config: |
+                    ui = true
+                    listener "tcp" {
+                      tls_disable = 1
+                      address     = "[::]:8200"
+                      cluster_address = "[::]:8201"
+                    }
+                    storage "raft" {
+                      path    = "/vault/data"
+                      node_id = "node1"
+                    }
+                dataStorage:
+                  enabled: true
+                  size: 10Gi
+                  storageClass: local-path
+                ui:
+                  enabled: true
+                ingress:
+                  enabled: false
+  template:
+    metadata:
+      name: '{{.name}}'
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: '{{.repoURL}}'
+        chart: '{{.chart}}'
+        targetRevision: '{{.targetRevision}}'
+        helm:
+          values: |
+            {{- .values | nindent 12 }}
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{.namespace}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
