@@ -34,15 +34,6 @@ resource "coder_agent" "main" {
     EOF
 }
 
-# Claude Code module — ANTHROPIC_API_KEY comes from the K8s secret injected
-# into the container environment; the module picks it up automatically.
-module "claude-code" {
-  source   = "registry.coder.com/coder/claude-code/coder"
-  version  = "3.4.3"
-  agent_id = coder_agent.main.id
-  workdir  = "/home/coder"
-}
-
 module "jetbrains-gateway" {
   source   = "registry.coder.com/coder/jetbrains-gateway/coder"
   version  = "1.2.5"
@@ -134,17 +125,6 @@ resource "kubernetes_deployment" "workspace" {
             name  = "CODER_AGENT_TOKEN"
             value = coder_agent.main.token
           }
-          # ANTHROPIC_API_KEY injected from Vault-backed K8s secret
-          env {
-            name = "ANTHROPIC_API_KEY"
-            value_from {
-              secret_key_ref {
-                name = "coder-secret"
-                key  = "ANTHROPIC_API_KEY"
-              }
-            }
-          }
-
           resources {
             requests = {
               cpu    = "250m"

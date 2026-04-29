@@ -47,13 +47,6 @@ resource "coder_agent" "main" {
     EOF
 }
 
-module "claude-code" {
-  source   = "registry.coder.com/coder/claude-code/coder"
-  version  = "3.4.3"
-  agent_id = coder_agent.main.id
-  workdir  = "/home/coder"
-}
-
 module "mux" {
   count       = data.coder_workspace.me.start_count
   source      = "registry.coder.com/coder/mux/coder"
@@ -121,15 +114,6 @@ resource "kubernetes_deployment" "workspace" {
           env {
             name  = "CODER_AGENT_TOKEN"
             value = coder_agent.main.token
-          }
-          env {
-            name = "ANTHROPIC_API_KEY"
-            value_from {
-              secret_key_ref {
-                name = "coder-secret"
-                key  = "ANTHROPIC_API_KEY"
-              }
-            }
           }
           resources {
             requests = {
