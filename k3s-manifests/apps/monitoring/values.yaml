@@ -66,6 +66,25 @@ kube-prometheus-stack:
           webhook_configs:
             - url: http://ntfy-relay.monitoring.svc.cluster.local:8080
               send_resolved: true
+      # Suppress downstream symptoms when an upstream root-cause alert is firing
+      # for the same pod / workload. Cuts the cascade where one CrashLoopBackOff
+      # produces 4-5 separate ntfy notifications.
+      inhibit_rules:
+        - source_matchers:
+            - alertname = "KubePodCrashLooping"
+          target_matchers:
+            - alertname =~ "KubePodNotReady|KubeContainerWaiting"
+          equal: ["namespace", "pod"]
+        - source_matchers:
+            - alertname = "KubeDeploymentRolloutStuck"
+          target_matchers:
+            - alertname = "KubeDeploymentReplicasMismatch"
+          equal: ["namespace", "deployment"]
+        - source_matchers:
+            - alertname =~ "KubePodCrashLooping|KubeContainerWaiting"
+          target_matchers:
+            - alertname = "KubeStatefulSetReplicasMismatch"
+          equal: ["namespace"]
 
   grafana:
     enabled: true
