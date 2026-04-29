@@ -90,3 +90,45 @@ spec:
             summary: Deployment {{ "{{ $labels.namespace }}/{{ $labels.deployment }}" }} has 0 ready replicas
             description: All replicas of this Deployment are unavailable.
 
+    - name: homeserver-cluster-argocd
+      rules:
+        # argocd-notifications already pages on a single sync failure (per-app
+        # webhook). These rules cover the harder-to-spot cases:
+        #   1. Drift that selfHeal can't fix (e.g. webhook rejecting the manifest).
+        #   2. The notifications controller itself being down — in which case
+        #      we'd never see a notification, but Prometheus would still alert.
+        - alert: ArgoAppOutOfSync
+          # Preview apps churn aggressively; ignore them.
+          expr: |
+            argocd_app_info{sync_status="OutOfSync",name!~"job-scout-pr-.*"} == 1
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: ArgoCD app {{ "{{ $labels.name }}" }} OutOfSync >30m
+            description: '{{ "selfHeal has not been able to converge {{ $labels.name }} (project {{ $labels.project }}) for 30 minutes — manual investigation required." }}'
+
+        - alert: ArgoAppNotHealthy
+          expr: |
+            argocd_app_info{health_status=~"Degraded|Missing|Unknown",name!~"job-scout-pr-.*"} == 1
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: ArgoCD app {{ "{{ $labels.name }}" }} {{ "{{ $labels.health_status }}" }} >30m
+            description: '{{ "App {{ $labels.name }} health is {{ $labels.health_status }}." }}'
+
+        - alert: ArgoSyncFailureRate
+          # Sustained failed syncs across the cluster — indicates a wider problem
+          # (repo-server unable to clone, AppProject restriction newly violated,
+          # etc.) that's worth surfacing as a single rolled-up alert rather than
+          # one per-app notification.
+          expr: |
+            sum(rate(argocd_app_sync_total{phase=~"Failed|Error"}[15m])) > 0.1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: ArgoCD sync failures >0.1/s for 15m
+            description: Multiple ArgoCD Applications are failing to sync — check argocd-application-controller logs.
+

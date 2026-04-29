@@ -113,6 +113,20 @@ argo-cd:
       server.insecure: false
 
 
+  # Each component exposes Prometheus metrics on a sidecar port; enabling the
+  # ServiceMonitor lets kube-prometheus-stack auto-discover them. The application
+  # controller is the source of `argocd_app_info` / `argocd_app_sync_total`,
+  # which the ArgoApp* alerts in apps/monitoring rely on.
+  controller:
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+  repoServer:
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
   # Server: NodePort to match current install (80:31552, 443:30777). The ingress targets the
   # ClusterIP through the Service name, so node ports are mostly historical, but matching them
   # avoids confusion if anything else points at them.
@@ -124,14 +138,22 @@ argo-cd:
     ingress:
       # We ship our own ingress in templates/ to stay consistent with the other wrappers.
       enabled: false
-
-  # Components currently running — keep enabled.
-  controller: {}
-  repoServer: {}
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
   applicationSet:
     enabled: true
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
   notifications:
     enabled: true
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
     # Post sync/health failures directly to ntfy.sh. Skips the Alertmanager-shaped ntfy-relay
     # (different payload schema) and avoids an extra hop. Topic 'halitdincer-homeserver' matches
     # the existing relay's topic so notifications land in the same phone subscription.
