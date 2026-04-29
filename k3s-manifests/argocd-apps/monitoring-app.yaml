@@ -31,6 +31,9 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      # Honor ignoreDifferences during normal syncs (not just OutOfSync detection),
+      # so selfHeal does not fight the ESO defaulting webhook on every reconcile.
+      - RespectIgnoreDifferences=true
 
   # ESO's defaulting webhook injects fields (conversionStrategy, decodingStrategy,
   # metadataPolicy, creationPolicy, deletionPolicy) onto every ExternalSecret it

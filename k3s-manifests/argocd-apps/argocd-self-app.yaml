@@ -29,6 +29,9 @@ spec:
     syncOptions:
       - CreateNamespace=false
       - ServerSideApply=true
+      # Honor ignoreDifferences during sync — selfHeal must not re-apply the
+      # caBundle webhook fields cert-manager rotates out from under us.
+      - RespectIgnoreDifferences=true
 
   # Tolerate webhook + controller race conditions during ArgoCD's own restart.
   ignoreDifferences:

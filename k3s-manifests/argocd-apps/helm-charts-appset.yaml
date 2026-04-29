@@ -127,3 +127,7 @@ spec:
           selfHeal: true
         syncOptions:
           - CreateNamespace=true
+          # ESO ships ExternalSecret/ClusterSecretStore CRDs as part of its own chart;
+          # the diff dry-run runs before the CRDs are installed, so without this option
+          # the first sync of external-secrets fails on its own custom resources.
+          - SkipDryRunOnMissingResource=true

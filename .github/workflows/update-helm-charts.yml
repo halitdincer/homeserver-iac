@@ -1,0 +1,67 @@
+name: Update Helm Charts
+
+# When Renovate (or a maintainer) opens a PR that bumps the kube-prometheus-stack
+# (or any other dependency) version in a wrapper chart's Chart.yaml, this workflow
+# regenerates Chart.lock + charts/*.tgz and pushes them back to the same PR branch.
+# Without this, helm-lint.yml fails because `helm dependency build` would refuse
+# to download a chart whose pinned version doesn't match Chart.lock.
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "k3s-manifests/apps/*/Chart.yaml"
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    # Only run for Renovate PRs or PRs from the repo owner. External contributor
+    # branches live on forks and we cannot push back to those.
+    if: github.actor == 'renovate[bot]' || github.actor == 'halitdincer'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: azure/setup-helm@v4
+
+      - name: Identify changed wrapper charts
+        id: changed
+        run: |
+          CHANGED=$(git diff --diff-filter=d --name-only origin/${{ github.base_ref }}...HEAD || true)
+          DIRS=""
+          for f in $CHANGED; do
+            if [[ "$f" == k3s-manifests/apps/*/Chart.yaml ]]; then
+              D=$(dirname "$f")
+              DIRS="$DIRS $D"
+            fi
+          done
+          echo "dirs=$DIRS" >> $GITHUB_OUTPUT
+
+      - name: Run helm dependency update
+        if: steps.changed.outputs.dirs != ''
+        run: |
+          for d in ${{ steps.changed.outputs.dirs }}; do
+            echo "::group::$d"
+            helm dependency update "$d"
+            echo "::endgroup::"
+          done
+
+      - name: Commit and push regenerated lockfiles
+        if: steps.changed.outputs.dirs != ''
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add k3s-manifests/apps/*/Chart.lock k3s-manifests/apps/*/charts || true
+          if git diff --cached --quiet; then
+            echo "No lockfile changes to commit."
+            exit 0
+          fi
+          git commit -m "chore(helm): update Chart.lock + dependency tarballs"
+          git push origin HEAD:${{ github.head_ref }}

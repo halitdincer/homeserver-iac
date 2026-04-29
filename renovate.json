@@ -21,6 +21,19 @@
       "groupName": "terraform-providers"
     },
     {
+      "matchManagers": ["helmv3"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "helm-charts (non-major)",
+      "automerge": true,
+      "automergeType": "branch"
+    },
+    {
+      "matchManagers": ["helmv3"],
+      "matchUpdateTypes": ["major"],
+      "addLabels": ["major-update"],
+      "automerge": false
+    },
+    {
       "matchDatasources": ["docker"],
       "matchUpdateTypes": ["major"],
       "addLabels": ["major-update"],
