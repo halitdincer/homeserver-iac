@@ -20,6 +20,44 @@ argo-cd:
         hs.status = "Healthy"
         hs.message = ""
         return hs
+
+      # Cluster-wide ignoreDifferences. Applies to every Application — defining
+      # them here removes the need for per-Application ignoreDifferences blocks
+      # for these well-known sources of drift.
+      #
+      # cert-manager rotates the caBundle on webhook configurations and
+      # APIService aggregations out from under us. Tolerate it everywhere so
+      # any chart whose webhook is cert-manager-managed (ESO, vault-injector,
+      # cert-manager itself, kyverno, etc.) does not show as OutOfSync.
+      resource.customizations.ignoreDifferences.admissionregistration.k8s.io_ValidatingWebhookConfiguration: |
+        jqPathExpressions:
+          - '.webhooks[].clientConfig.caBundle'
+      resource.customizations.ignoreDifferences.admissionregistration.k8s.io_MutatingWebhookConfiguration: |
+        jqPathExpressions:
+          - '.webhooks[].clientConfig.caBundle'
+      resource.customizations.ignoreDifferences.apiregistration.k8s.io_APIService: |
+        jsonPointers:
+          - /spec/caBundle
+
+      # The ESO defaulting webhook injects fields onto every ExternalSecret it
+      # admits (conversionStrategy, decodingStrategy, metadataPolicy,
+      # creationPolicy, deletionPolicy). These are not in our source manifests,
+      # so without this rule every ExternalSecret reports OutOfSync forever.
+      resource.customizations.ignoreDifferences.external-secrets.io_ExternalSecret: |
+        jsonPointers:
+          - /spec/dataFrom/0/extract/conversionStrategy
+          - /spec/dataFrom/0/extract/decodingStrategy
+          - /spec/dataFrom/0/extract/metadataPolicy
+          - /spec/target/creationPolicy
+          - /spec/target/deletionPolicy
+
+      # argo-rollouts mutates the Rollout's status/replicas during canary or
+      # blue-green progression. Trust the controller; do not let selfHeal fight it.
+      resource.customizations.ignoreDifferences.argoproj.io_Rollout: |
+        jsonPointers:
+          - /spec/replicas
+        jqPathExpressions:
+          - '.spec.template.spec.containers[].image'
       resource.customizations.ignoreResourceUpdates.ConfigMap: |
         jqPathExpressions:
           - '.metadata.annotations."cluster-autoscaler.kubernetes.io/last-updated"'

@@ -73,6 +73,38 @@ spec:
             targetRevision: "0.14.0"
             values: |
               installCRDs: true
+              # ESO emits externalsecret_status_condition / externalsecret_sync_calls_*
+              # on the controller's metrics port. The ServiceMonitor is auto-discovered
+              # by kube-prometheus-stack. Powers the ExternalSecretNotReady alert in
+              # apps/monitoring/templates/prometheusrule-cluster.yaml.
+              serviceMonitor:
+                enabled: true
+          - name: argo-rollouts
+            namespace: argo-rollouts
+            repoURL: https://argoproj.github.io/argo-helm
+            chart: argo-rollouts
+            targetRevision: "2.40.0"
+            values: |
+              # Just the controller for now. Apps adopt Rollouts by replacing their
+              # Deployment with kind: Rollout in a future PR (e.g. job-scout).
+              installCRDs: true
+              controller:
+                metrics:
+                  enabled: true
+                  serviceMonitor:
+                    enabled: true
+                resources:
+                  requests:
+                    cpu: 50m
+                    memory: 128Mi
+                  limits:
+                    cpu: 500m
+                    memory: 256Mi
+              dashboard:
+                enabled: true
+                # Accessed via `kubectl argo rollouts dashboard` port-forward; no ingress.
+                service:
+                  type: ClusterIP
           - name: reloader
             namespace: reloader
             repoURL: https://stakater.github.io/stakater-charts

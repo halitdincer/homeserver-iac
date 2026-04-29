@@ -90,6 +90,22 @@ spec:
             summary: Deployment {{ "{{ $labels.namespace }}/{{ $labels.deployment }}" }} has 0 ready replicas
             description: All replicas of this Deployment are unavailable.
 
+    - name: homeserver-cluster-secrets
+      rules:
+        # ESO emits this gauge from the controller; relies on serviceMonitor.enabled
+        # in the external-secrets Helm values. When Vault is sealed or ESO loses
+        # auth, every consuming Deployment silently keeps serving the cached
+        # Secret value — so a stuck Ready=False is the earliest failure signal.
+        - alert: ExternalSecretNotReady
+          expr: |
+            externalsecret_status_condition{condition="Ready",status="False"} == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: ExternalSecret {{ "{{ $labels.namespace }}/{{ $labels.name }}" }} not Ready
+            description: ESO has been unable to sync this ExternalSecret from its store for >15m.
+
     - name: homeserver-cluster-argocd
       rules:
         # argocd-notifications already pages on a single sync failure (per-app

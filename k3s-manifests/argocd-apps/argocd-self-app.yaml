@@ -30,18 +30,8 @@ spec:
       - CreateNamespace=false
       - ServerSideApply=true
       # Honor ignoreDifferences during sync — selfHeal must not re-apply the
-      # caBundle webhook fields cert-manager rotates out from under us.
+      # caBundle webhook fields cert-manager rotates out from under us. The
+      # webhook caBundle ignoreDifferences rules live cluster-wide in argocd-cm.
       - RespectIgnoreDifferences=true
-
-  # Tolerate webhook + controller race conditions during ArgoCD's own restart.
-  ignoreDifferences:
-    - group: admissionregistration.k8s.io
-      kind: ValidatingWebhookConfiguration
-      jqPathExpressions:
-        - '.webhooks[].clientConfig.caBundle'
-    - group: admissionregistration.k8s.io
-      kind: MutatingWebhookConfiguration
-      jqPathExpressions:
-        - '.webhooks[].clientConfig.caBundle'
 
   project: homeserver

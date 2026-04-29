@@ -33,18 +33,5 @@ spec:
       - ServerSideApply=true
       # Honor ignoreDifferences during normal syncs (not just OutOfSync detection),
       # so selfHeal does not fight the ESO defaulting webhook on every reconcile.
+      # The actual ignoreDifferences rules live cluster-wide in argocd-cm.
       - RespectIgnoreDifferences=true
-
-  # ESO's defaulting webhook injects fields (conversionStrategy, decodingStrategy,
-  # metadataPolicy, creationPolicy, deletionPolicy) onto every ExternalSecret it
-  # admits. Those defaults are not in our source manifest, so ArgoCD reports the
-  # resource as OutOfSync forever. Ignore them.
-  ignoreDifferences:
-    - group: external-secrets.io
-      kind: ExternalSecret
-      jsonPointers:
-        - /spec/dataFrom/0/extract/conversionStrategy
-        - /spec/dataFrom/0/extract/decodingStrategy
-        - /spec/dataFrom/0/extract/metadataPolicy
-        - /spec/target/creationPolicy
-        - /spec/target/deletionPolicy
