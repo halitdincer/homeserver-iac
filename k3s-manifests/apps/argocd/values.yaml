@@ -112,6 +112,7 @@ argo-cd:
     params:
       server.insecure: false
 
+
   # Server: NodePort to match current install (80:31552, 443:30777). The ingress targets the
   # ClusterIP through the Service name, so node ports are mostly historical, but matching them
   # avoids confusion if anything else points at them.
@@ -131,6 +132,62 @@ argo-cd:
     enabled: true
   notifications:
     enabled: true
+    # Post sync/health failures directly to ntfy.sh. Skips the Alertmanager-shaped ntfy-relay
+    # (different payload schema) and avoids an extra hop. Topic 'halitdincer-homeserver' matches
+    # the existing relay's topic so notifications land in the same phone subscription.
+    notifiers:
+      service.webhook.ntfy: |
+        url: https://ntfy.sh
+        headers:
+        - name: Content-Type
+          value: text/plain
+    templates:
+      template.app-sync-failed: |
+        webhook:
+          ntfy:
+            method: POST
+            path: /halitdincer-homeserver
+            body: |
+              {{.app.metadata.name}}: {{.app.status.operationState.message}}
+              {{.context.argocdUrl}}/applications/{{.app.metadata.name}}
+            headers:
+            - name: Title
+              value: "ArgoCD sync failed: {{.app.metadata.name}}"
+            - name: Priority
+              value: "4"
+            - name: Tags
+              value: "warning,argocd"
+      template.app-health-degraded: |
+        webhook:
+          ntfy:
+            method: POST
+            path: /halitdincer-homeserver
+            body: |
+              {{.app.metadata.name}} is Degraded
+              {{.context.argocdUrl}}/applications/{{.app.metadata.name}}
+            headers:
+            - name: Title
+              value: "ArgoCD degraded: {{.app.metadata.name}}"
+            - name: Priority
+              value: "4"
+            - name: Tags
+              value: "warning,argocd"
+    triggers:
+      trigger.on-sync-failed: |
+        - description: Application sync failed
+          send: [app-sync-failed]
+          when: app.status.operationState.phase in ['Error', 'Failed']
+      trigger.on-health-degraded: |
+        - description: Application health degraded
+          send: [app-health-degraded]
+          when: app.status.health.status == 'Degraded'
+    # Global default subscription — applies to ALL Applications without per-app annotations.
+    subscriptions:
+      - recipients:
+          - webhook:ntfy
+        triggers:
+          - on-sync-failed
+          - on-health-degraded
   dex:
     enabled: true
   redis:
