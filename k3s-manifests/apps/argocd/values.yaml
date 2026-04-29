@@ -58,6 +58,18 @@ argo-cd:
           - /spec/replicas
         jqPathExpressions:
           - '.spec.template.spec.containers[].image'
+
+      # CRDs always drift on these two fields:
+      #   /spec/conversion          — apiserver injects {strategy: None} on create
+      #   /spec/preserveUnknownFields — chart sends false; apiserver omits the default
+      # Without this rule every chart that ships its own CRDs (argo-rollouts,
+      # external-secrets, kube-prometheus-stack on first install) reports those
+      # CRDs OutOfSync forever. Real CRD schema bumps still surface as drift on
+      # the /spec/versions field, which is not ignored.
+      resource.customizations.ignoreDifferences.apiextensions.k8s.io_CustomResourceDefinition: |
+        jsonPointers:
+          - /spec/preserveUnknownFields
+          - /spec/conversion
       resource.customizations.ignoreResourceUpdates.ConfigMap: |
         jqPathExpressions:
           - '.metadata.annotations."cluster-autoscaler.kubernetes.io/last-updated"'

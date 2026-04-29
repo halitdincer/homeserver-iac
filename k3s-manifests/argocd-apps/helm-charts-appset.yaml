@@ -185,7 +185,8 @@ spec:
           # the diff dry-run runs before the CRDs are installed, so without this option
           # the first sync of external-secrets fails on its own custom resources.
           - SkipDryRunOnMissingResource=true
-          # argo-rollouts (and any future chart shipping large CRDs like CNPG)
-          # exceeds the 256 KB last-applied-configuration annotation limit imposed
-          # by client-side apply. SSA is also the recommended ArgoCD default.
+          # SSA is the recommended ArgoCD default and is required for charts shipping
+          # large CRDs (argo-rollouts) that exceed the 256 KB CSA annotation limit.
+          # Once a resource is SSA-applied, switching back to CSA causes managedFields
+          # ownership drift, so this needs to stay on for the AppSet now.
           - ServerSideApply=true
