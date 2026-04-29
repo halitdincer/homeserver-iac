@@ -27,6 +27,7 @@ spec:
     - https://helm.coder.com/v2
     - https://helm.releases.hashicorp.com
     - https://prometheus-community.github.io/helm-charts
+    - https://stakater.github.io/stakater-charts
 
   destinations:
     - server: https://kubernetes.default.svc
@@ -57,6 +58,8 @@ spec:
       namespace: monitoring
     - server: https://kubernetes.default.svc
       namespace: personal-site
+    - server: https://kubernetes.default.svc
+      namespace: reloader
     - server: https://kubernetes.default.svc
       namespace: teslamate
     - server: https://kubernetes.default.svc

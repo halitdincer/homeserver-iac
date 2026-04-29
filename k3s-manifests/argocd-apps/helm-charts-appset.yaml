@@ -73,6 +73,28 @@ spec:
             targetRevision: "0.14.0"
             values: |
               installCRDs: true
+          - name: reloader
+            namespace: reloader
+            repoURL: https://stakater.github.io/stakater-charts
+            chart: reloader
+            targetRevision: "2.2.0"
+            values: |
+              reloader:
+                # Watch every namespace for annotated Deployments/StatefulSets.
+                # Pods carrying `reloader.stakater.com/auto: "true"` (or a list of
+                # specific Secrets/ConfigMaps) restart automatically when their
+                # referenced Secret or ConfigMap changes — useful for ESO-rotated
+                # Vault secrets where the consuming Deployment otherwise keeps
+                # serving stale env values.
+                watchGlobally: true
+                reloadStrategy: annotations
+                resources:
+                  requests:
+                    cpu: 10m
+                    memory: 64Mi
+                  limits:
+                    cpu: 100m
+                    memory: 128Mi
           - name: vault
             namespace: vault
             repoURL: https://helm.releases.hashicorp.com
