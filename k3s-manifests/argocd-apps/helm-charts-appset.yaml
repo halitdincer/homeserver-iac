@@ -110,7 +110,7 @@ spec:
       name: '{{.name}}'
       namespace: argocd
     spec:
-      project: default
+      project: homeserver
       source:
         repoURL: '{{.repoURL}}'
         chart: '{{.chart}}'

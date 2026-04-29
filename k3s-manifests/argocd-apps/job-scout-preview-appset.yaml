@@ -22,7 +22,7 @@ spec:
         app: job-scout-preview
         pr: "{{number}}"
     spec:
-      project: default
+      project: homeserver
       source:
         repoURL: git@github.com:halitdincer/homeserver-iac.git
         targetRevision: main

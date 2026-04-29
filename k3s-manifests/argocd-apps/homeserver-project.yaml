@@ -1,0 +1,94 @@
+---
+# Single AppProject all homeserver Applications/AppSets target. Defense-in-depth:
+# a compromised manifest can only deploy resources to whitelisted namespaces, only
+# create whitelisted cluster-scoped kinds, and only pull from whitelisted source
+# repos.
+#
+# To add a new app: extend `destinations` (namespace) and, if the app pulls from a
+# new chart repo, extend `sourceRepos`. Cluster-scoped kinds are explicit; if a new
+# chart needs a new kind, add it to `clusterResourceWhitelist` rather than relaxing
+# the project to `*/*`.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: homeserver
+  namespace: argocd
+  # Don't let the project be deleted while child Applications still reference it.
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Homeserver workloads on the single in-cluster destination.
+
+  sourceRepos:
+    - git@github.com:halitdincer/homeserver-iac.git
+    - https://argoproj.github.io/argo-helm
+    - https://charts.bitnami.com/bitnami
+    - https://charts.external-secrets.io
+    - https://helm.coder.com/v2
+    - https://helm.releases.hashicorp.com
+    - https://prometheus-community.github.io/helm-charts
+
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: argocd
+    - server: https://kubernetes.default.svc
+      namespace: atlantis
+    - server: https://kubernetes.default.svc
+      namespace: cert-manager
+    - server: https://kubernetes.default.svc
+      namespace: coder
+    - server: https://kubernetes.default.svc
+      namespace: default
+    - server: https://kubernetes.default.svc
+      namespace: external-secrets
+    - server: https://kubernetes.default.svc
+      namespace: flight-tracker
+    - server: https://kubernetes.default.svc
+      namespace: ingress-nginx
+    - server: https://kubernetes.default.svc
+      namespace: job-scout
+    # job-scout preview AppSet creates per-PR namespaces.
+    - server: https://kubernetes.default.svc
+      namespace: job-scout-preview-*
+    - server: https://kubernetes.default.svc
+      namespace: monitoring
+    - server: https://kubernetes.default.svc
+      namespace: personal-site
+    - server: https://kubernetes.default.svc
+      namespace: teslamate
+    - server: https://kubernetes.default.svc
+      namespace: vault
+
+  # Cluster-scoped kinds these apps actually create (surveyed from live cluster).
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+    - group: apiregistration.k8s.io
+      kind: APIService
+    - group: cert-manager.io
+      kind: ClusterIssuer
+    - group: external-secrets.io
+      kind: ClusterSecretStore
+    - group: networking.k8s.io
+      kind: IngressClass
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+    - group: storage.k8s.io
+      kind: StorageClass
+    - group: scheduling.k8s.io
+      kind: PriorityClass
+
+  # Namespaced resources: leave permissive. Adding fine-grained restriction here
+  # is high-friction (charts pull in new kinds on upgrade) for low marginal value
+  # given destinations are already restricted.
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

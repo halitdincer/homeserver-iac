@@ -41,4 +41,4 @@ spec:
       jqPathExpressions:
         - '.webhooks[].clientConfig.caBundle'
 
-  project: default
+  project: homeserver

@@ -51,7 +51,7 @@ spec:
       name: '{{.name}}'
       namespace: argocd
     spec:
-      project: default
+      project: homeserver
       source:
         repoURL: git@github.com:halitdincer/homeserver-iac.git
         targetRevision: main
