@@ -99,13 +99,18 @@ spec:
           volumeMounts:
             - name: shared
               mountPath: /shared
+          # No CPU limit: `vault status` is a short-lived Go binary that bursts
+          # well above 300m during startup/TLS handshake, and the previous
+          # 300m cap throttled ~70% of CPU periods (cpu.stat: nr_throttled
+          # 10231 / nr_periods 14558). Steady-state usage is ~7m, so the
+          # request alone is enough for scheduling fairness. Memory still
+          # capped, since unbounded memory is the actual eviction risk.
           resources:
             requests:
               cpu: 20m
               memory: 32Mi
             limits:
-              cpu: 300m
-              memory: 64Mi
+              memory: 96Mi
         - name: recovery
           image: alpine/k8s:1.34.3
           command:
@@ -137,10 +142,13 @@ spec:
           volumeMounts:
             - name: shared
               mountPath: /shared
+          # No CPU limit: `kubectl wait` and `kubectl rollout restart` are
+          # bursty during a recovery window after a power outage. The
+          # previous 200m cap delays the cascade restart on the one path
+          # that actually matters. Steady-state idle. Memory still capped.
           resources:
             requests:
               cpu: 10m
               memory: 32Mi
             limits:
-              cpu: 200m
-              memory: 64Mi
+              memory: 96Mi

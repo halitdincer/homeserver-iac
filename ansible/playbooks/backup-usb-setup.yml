@@ -1,8 +1,17 @@
 ---
-# One-time USB backup drive setup for Proxmox
-# Run this when the external USB drive arrives
+# One-time USB backup drive setup for Proxmox.
 #
-# Usage:
+# DEPRECATED for the current homeserver setup:
+#   The live USB drive is an exFAT volume ("Dincer Disk", UUID 6786-E1F3) that
+#   is shared with the user's personal files. It must NOT be reformatted.
+#   See docs/BACKUPS.md for the current mount/setup procedure.
+#
+# This playbook is kept for the case of a brand-new dedicated backup drive.
+# It will format and partition the target device — DESTROYING ALL DATA.
+# Safety guards below abort if the device already has any partitions or a
+# filesystem, so it can't be aimed at the existing exFAT drive by accident.
+#
+# Usage (only on a known-empty drive):
 #   ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/backup-usb-setup.yml -e usb_device=/dev/sdX
 #
 # IMPORTANT: Double-check the device name before running!
@@ -47,6 +56,32 @@
       command: lsblk -o NAME,SIZE,TYPE,MOUNTPOINT {{ usb_device }}
       register: device_info
       changed_when: false
+
+    # Refuse to format any drive that already has partitions or a filesystem.
+    # Guards specifically against running this against the existing exFAT
+    # backup drive (label "Dincer Disk", UUID 6786-E1F3), which holds the
+    # user's personal files alongside the backup subdirectories.
+    - name: Probe for existing partitions / filesystem on target device
+      command: lsblk -nro NAME,FSTYPE,LABEL,UUID {{ usb_device }}
+      register: device_probe
+      changed_when: false
+
+    - name: Abort if target device is not blank
+      assert:
+        that:
+          - device_probe.stdout_lines | length <= 1
+          - "'exfat' not in device_probe.stdout"
+          - "'Dincer Disk' not in device_probe.stdout"
+          - "'6786-E1F3' not in device_probe.stdout"
+        fail_msg: |
+          Device {{ usb_device }} appears to already contain data:
+
+          {{ device_probe.stdout }}
+
+          This playbook will DESTROY ALL DATA on the target device. Refusing
+          to run against a non-blank drive. If you are certain you want to
+          reformat, manually wipe the device first (e.g. `wipefs -a`) and
+          re-run.
 
     - name: Show device info and confirm
       pause:
