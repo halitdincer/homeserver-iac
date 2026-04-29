@@ -185,3 +185,7 @@ spec:
           # the diff dry-run runs before the CRDs are installed, so without this option
           # the first sync of external-secrets fails on its own custom resources.
           - SkipDryRunOnMissingResource=true
+          # argo-rollouts (and any future chart shipping large CRDs like CNPG)
+          # exceeds the 256 KB last-applied-configuration annotation limit imposed
+          # by client-side apply. SSA is also the recommended ArgoCD default.
+          - ServerSideApply=true
