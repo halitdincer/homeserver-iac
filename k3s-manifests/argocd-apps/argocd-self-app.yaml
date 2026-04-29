@@ -1,0 +1,44 @@
+---
+# ArgoCD Application that manages ArgoCD itself.
+# Bootstrap: kubectl apply -f this file ONCE after the helm install cutover.
+# After bootstrap, all ArgoCD config flows through Git → ArgoCD → ArgoCD itself.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  # Don't let ArgoCD prune itself if this Application is ever deleted.
+  finalizers: []
+spec:
+  source:
+    repoURL: git@github.com:halitdincer/homeserver-iac.git
+    targetRevision: main
+    path: k3s-manifests/apps/argocd
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      # Self-heal yes; prune NO. Pruning the controller that's running this sync = lose ArgoCD.
+      # If we ever need to remove a chart-managed resource, do it manually first.
+      prune: false
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
+
+  # Tolerate webhook + controller race conditions during ArgoCD's own restart.
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      jqPathExpressions:
+        - '.webhooks[].clientConfig.caBundle'
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+      jqPathExpressions:
+        - '.webhooks[].clientConfig.caBundle'
+
+  project: default

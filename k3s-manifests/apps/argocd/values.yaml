@@ -1,0 +1,143 @@
+argo-cd:
+  # Keep generated names as `argocd-*` to match existing ingress backend, kubectl muscle memory,
+  # and the in-cluster URLs that current Applications/Sources rely on.
+  fullnameOverride: argocd
+
+  global:
+    domain: argocd.halitdincer.com
+
+  configs:
+    # Preserve the existing `argocd-secret` (admin password hash, server.secretkey, TLS).
+    # If we let the chart create it, server.secretkey rotates and all sessions/tokens invalidate;
+    # admin password reverts to a chart-generated initial value.
+    secret:
+      createSecret: false
+
+    # Mirrors the current live `argocd-cm` data captured pre-cutover.
+    cm:
+      resource.customizations.health.argocd-image-updater.argoproj.io_ImageUpdater: |-
+        hs = {}
+        hs.status = "Healthy"
+        hs.message = ""
+        return hs
+      resource.customizations.ignoreResourceUpdates.ConfigMap: |
+        jqPathExpressions:
+          - '.metadata.annotations."cluster-autoscaler.kubernetes.io/last-updated"'
+          - '.metadata.annotations."control-plane.alpha.kubernetes.io/leader"'
+      resource.customizations.ignoreResourceUpdates.Endpoints: |
+        jsonPointers:
+          - /metadata
+          - /subsets
+      resource.customizations.ignoreResourceUpdates.all: |
+        jsonPointers:
+          - /status
+      resource.customizations.ignoreResourceUpdates.apps_ReplicaSet: |
+        jqPathExpressions:
+          - '.metadata.annotations."deployment.kubernetes.io/desired-replicas"'
+          - '.metadata.annotations."deployment.kubernetes.io/max-replicas"'
+          - '.metadata.annotations."rollout.argoproj.io/desired-replicas"'
+      resource.customizations.ignoreResourceUpdates.argoproj.io_Application: |
+        jqPathExpressions:
+          - '.metadata.annotations."notified.notifications.argoproj.io"'
+          - '.metadata.annotations."argocd.argoproj.io/refresh"'
+          - '.metadata.annotations."argocd.argoproj.io/hydrate"'
+          - '.operation'
+      resource.customizations.ignoreResourceUpdates.argoproj.io_Rollout: |
+        jqPathExpressions:
+          - '.metadata.annotations."notified.notifications.argoproj.io"'
+      resource.customizations.ignoreResourceUpdates.autoscaling_HorizontalPodAutoscaler: |
+        jqPathExpressions:
+          - '.metadata.annotations."autoscaling.alpha.kubernetes.io/behavior"'
+          - '.metadata.annotations."autoscaling.alpha.kubernetes.io/conditions"'
+          - '.metadata.annotations."autoscaling.alpha.kubernetes.io/metrics"'
+          - '.metadata.annotations."autoscaling.alpha.kubernetes.io/current-metrics"'
+      resource.customizations.ignoreResourceUpdates.discovery.k8s.io_EndpointSlice: |
+        jsonPointers:
+          - /metadata
+          - /endpoints
+          - /ports
+      resource.exclusions: |
+        - apiGroups:
+          - ''
+          - discovery.k8s.io
+          kinds:
+          - Endpoints
+          - EndpointSlice
+        - apiGroups:
+          - coordination.k8s.io
+          kinds:
+          - Lease
+        - apiGroups:
+          - authentication.k8s.io
+          - authorization.k8s.io
+          kinds:
+          - SelfSubjectReview
+          - TokenReview
+          - LocalSubjectAccessReview
+          - SelfSubjectAccessReview
+          - SelfSubjectRulesReview
+          - SubjectAccessReview
+        - apiGroups:
+          - certificates.k8s.io
+          kinds:
+          - CertificateSigningRequest
+        - apiGroups:
+          - cert-manager.io
+          kinds:
+          - CertificateRequest
+        - apiGroups:
+          - cilium.io
+          kinds:
+          - CiliumIdentity
+          - CiliumEndpoint
+          - CiliumEndpointSlice
+        - apiGroups:
+          - kyverno.io
+          - reports.kyverno.io
+          - wgpolicyk8s.io
+          kinds:
+          - PolicyReport
+          - ClusterPolicyReport
+          - EphemeralReport
+          - ClusterEphemeralReport
+          - AdmissionReport
+          - ClusterAdmissionReport
+          - BackgroundScanReport
+          - ClusterBackgroundScanReport
+          - UpdateRequest
+
+    # TLS terminates at the ingress; ArgoCD server itself runs in insecure mode behind it
+    # to match the current backend-protocol: HTTPS / force-ssl-redirect ingress behavior.
+    # Current install runs argocd-server with TLS (port 443 in the Service); preserve that.
+    params:
+      server.insecure: false
+
+  # Server: NodePort to match current install (80:31552, 443:30777). The ingress targets the
+  # ClusterIP through the Service name, so node ports are mostly historical, but matching them
+  # avoids confusion if anything else points at them.
+  server:
+    service:
+      type: NodePort
+      nodePortHttp: 31552
+      nodePortHttps: 30777
+    ingress:
+      # We ship our own ingress in templates/ to stay consistent with the other wrappers.
+      enabled: false
+
+  # Components currently running — keep enabled.
+  controller: {}
+  repoServer: {}
+  applicationSet:
+    enabled: true
+  notifications:
+    enabled: true
+  dex:
+    enabled: true
+  redis:
+    enabled: true
+
+  # Don't install the bundled CRDs via the chart — the cluster already has them from the original
+  # raw-manifest install. Helm would otherwise try to take ownership of CRDs and could conflict.
+  # (We can flip this to true on the next major version bump if upstream evolves the CRDs.)
+  crds:
+    install: false
