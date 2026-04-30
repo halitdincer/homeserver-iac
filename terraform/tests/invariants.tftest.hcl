@@ -27,6 +27,7 @@ mock_provider "proxmox" {
   }
 }
 mock_provider "namecheap" {}
+mock_provider "grafana" {}
 
 # Cloudflare resources are imported via `import` blocks in dns.tf — mock
 # providers can't process imports, so each cloudflare_dns_record needs an
@@ -90,6 +91,8 @@ variables {
   namecheap_user_name  = "mock"
   namecheap_api_user   = "mock"
   namecheap_api_key    = "mock"
+  grafana_url          = "https://mock.grafana.net"
+  grafana_auth_token   = "mock"
 }
 
 # ── VM IDs ────────────────────────────────────────────────────────────────────
