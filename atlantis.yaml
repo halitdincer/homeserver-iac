@@ -7,6 +7,10 @@ projects:
   - name: homeserver-iac
     dir: terraform
     workspace: default
+    # Pin to a cached version. Without this, Atlantis fetches "latest", which
+    # currently fails because the bundled downloader rejects HashiCorp's rotated
+    # PGP signing key. Cached on the Atlantis PVC: 1.5.7, 1.14.5, 1.14.6.
+    terraform_version: 1.14.6
     autoplan:
       enabled: true
       when_modified:
