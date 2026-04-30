@@ -16,6 +16,9 @@ projects:
       when_modified:
         - "*.tf"
         - "*.tfvars"
+        # Dashboard JSON is read into terraform via file() in grafana.tf, so
+        # edits there must trigger a plan even though no .tf changed.
+        - "grafana-dashboards/*.json"
     workflow: persistent-state
 
 workflows:

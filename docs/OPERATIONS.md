@@ -8,7 +8,9 @@
 | `apps` | `k3s-manifests/apps/` | Coder, single-file manifests for the remaining hand-rolled services |
 | `homepage` | `k3s-manifests/apps/homepage/` (Helm: jameswynn/homepage@2.1.0) | Homepage dashboard (wrapper chart + custom templates) |
 | `atlantis` | `k3s-manifests/apps/atlantis/` (Helm: runatlantis/atlantis@6.3.0, image v0.31.0) | Atlantis Terraform GitOps (wrapper chart + custom templates) |
-| `alloy` | Helm: grafana/alloy@1.8.0 (DaemonSet) | Cloud-bound observability agent — discovers ServiceMonitors cluster-wide and `prometheus.remote_write`s metrics to Grafana Cloud Mimir; tails container logs and `loki.write`s them to Grafana Cloud Loki. Also scrapes the Proxmox host node_exporter directly. Replaces the deleted in-cluster `monitoring` and `loki` apps. |
+| `alloy` | Helm: grafana/alloy@1.8.0 (DaemonSet) | Cloud-bound observability agent — discovers ServiceMonitors cluster-wide and `prometheus.remote_write`s metrics to Grafana Cloud Mimir; tails container logs and `loki.write`s them to Grafana Cloud Loki. Also scrapes the Proxmox host node_exporter and (via the API-server proxy) the local kubelet + cAdvisor. Replaces the deleted in-cluster `monitoring` and `loki` apps. Extra `nodes/proxy` RBAC lives in `k3s-manifests/apps/alloy-extra-rbac.yaml`. |
+| `kube-state-metrics` | Helm: prometheus-community/kube-state-metrics@5.27.0 | Exposes Kubernetes object state (Node Ready, Pod phase) as Prometheus metrics. Scraped by Alloy via auto-generated ServiceMonitor. Allowlist limits the scrape to only the metric families the dashboards query. |
+| `prometheus-node-exporter` | Helm: prometheus-community/prometheus-node-exporter@4.50.0 (DaemonSet) | Per-node host metrics (CPU, memory, filesystem) for the K3s VM. Scraped by Alloy via auto-generated ServiceMonitor. Pairs with the external `prometheus.scrape "proxmox_host"` in Alloy's River config that covers the Proxmox host. |
 | `ingresses` | `k3s-manifests/ingresses/` | Ingress resources for `apps`-tier services |
 | `job-scout` | `k3s-manifests/job-scout/` | job-scout (kustomize) |
 | `vault` | Helm: hashicorp/vault@0.29.1 | Vault (standalone Raft) |
