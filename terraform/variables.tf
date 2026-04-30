@@ -111,13 +111,13 @@ variable "grafana_auth_token" {
 variable "grafana_mimir_datasource_name" {
   description = "Name of the auto-provisioned Mimir/Prometheus datasource in Cloud Grafana"
   type        = string
-  default     = "grafanacloud-prom"
+  default     = "grafanacloud-halitdincer-prom"
 }
 
 variable "grafana_loki_datasource_name" {
   description = "Name of the auto-provisioned Loki datasource in Cloud Grafana"
   type        = string
-  default     = "grafanacloud-logs"
+  default     = "grafanacloud-halitdincer-logs"
 }
 
 variable "ntfy_topic" {
