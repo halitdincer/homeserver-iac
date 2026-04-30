@@ -110,6 +110,10 @@ kube-prometheus-stack:
         searchNamespace: ALL
       datasources:
         enabled: true
+        # Match dashboards: scan every namespace for ConfigMaps labeled
+        # grafana_datasource=1. Lets each app ship its own datasource next
+        # to its workload (e.g. apps/loki/templates/grafana-datasource.yaml).
+        searchNamespace: ALL
     # We ship our own ingress (consistent with other Helm wrappers in this repo).
     ingress:
       enabled: false
