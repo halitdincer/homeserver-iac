@@ -102,24 +102,6 @@ resource "cloudflare_dns_record" "grafana" {
   proxied = false
 }
 
-resource "cloudflare_dns_record" "prometheus" {
-  zone_id = data.cloudflare_zone.halitdincer.zone_id
-  name    = "prometheus"
-  type    = "A"
-  content = "100.112.34.54"
-  ttl     = 1800
-  proxied = false
-}
-
-resource "cloudflare_dns_record" "loki" {
-  zone_id = data.cloudflare_zone.halitdincer.zone_id
-  name    = "loki"
-  type    = "A"
-  content = "100.112.34.54"
-  ttl     = 1800
-  proxied = false
-}
-
 resource "cloudflare_dns_record" "vault" {
   zone_id = data.cloudflare_zone.halitdincer.zone_id
   name    = "vault"

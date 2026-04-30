@@ -25,14 +25,6 @@ mock_provider "cloudflare" {
     values = { id = "stub" }
   }
   override_resource {
-    target = cloudflare_dns_record.prometheus
-    values = { id = "stub" }
-  }
-  override_resource {
-    target = cloudflare_dns_record.loki
-    values = { id = "stub" }
-  }
-  override_resource {
     target = cloudflare_dns_record.vault
     values = { id = "stub" }
   }
