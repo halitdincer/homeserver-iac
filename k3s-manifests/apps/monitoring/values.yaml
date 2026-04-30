@@ -131,6 +131,13 @@ kube-prometheus-stack:
 
   nodeExporter:
     enabled: true
+    # Drop the AIX and Darwin variants of the Nodes dashboard — we run
+    # neither and they just add noise to the dashboard list.
+    operatingSystems:
+      aix:
+        enabled: false
+      darwin:
+        enabled: false
   kubeStateMetrics:
     enabled: true
 
