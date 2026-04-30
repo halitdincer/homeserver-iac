@@ -98,6 +98,15 @@ kube-prometheus-stack:
       enabled: true
       storageClassName: local-path
       size: 2Gi
+    # Disable the initChownData init container. Grafana creates
+    # /var/lib/grafana/{csv,pdf,png} at runtime with mode 700; the init
+    # container drops all caps except CHOWN (no DAC_OVERRIDE), so on any
+    # subsequent rollout it can't traverse those dirs and `chown -R` fails
+    # with EACCES, blocking the rollout. The PVC files are already owned
+    # by the grafana UID (472) from the first install, so the chown is a
+    # no-op anyway.
+    initChownData:
+      enabled: false
     grafana.ini:
       server:
         root_url: https://grafana.halitdincer.com
