@@ -1,0 +1,114 @@
+loki:
+  # SingleBinary mode: one StatefulSet runs ingester + distributor + querier +
+  # query-frontend + ruler + compactor in a single process. Right tradeoff for
+  # homelab scale; matches the simplicity of our hand-rolled Prometheus pattern.
+  deploymentMode: SingleBinary
+
+  loki:
+    # No multi-tenancy needed on a single-user cluster.
+    auth_enabled: false
+
+    commonConfig:
+      replication_factor: 1
+
+    # TSDB-on-filesystem schema. v13 is the current recommended schema.
+    schemaConfig:
+      configs:
+        - from: "2024-01-01"
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: loki_index_
+            period: 24h
+
+    storage:
+      type: filesystem
+      filesystem:
+        chunks_directory: /var/loki/chunks
+        rules_directory: /var/loki/rules
+
+    # 30-day retention. Compactor enforces the limit — without it Loki keeps
+    # data forever even if limits_config is set.
+    limits_config:
+      retention_period: 720h
+      # Allow Alloy to send labels with arbitrary cardinality (we relabel
+      # namespace/pod/container/node — that's well-bounded). Bump if structured
+      # logs introduce high-cardinality labels later.
+      max_global_streams_per_user: 5000
+
+    compactor:
+      retention_enabled: true
+      delete_request_store: filesystem
+
+    # Disable the embedded ruler (we use Prometheus's PrometheusRule CRDs for
+    # alerting on metrics; log-based alerts can be added later by enabling
+    # ruler and writing LokiRule resources).
+    ruler:
+      enable_api: false
+
+  singleBinary:
+    replicas: 1
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: local-path
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        # No CPU limit (homelab convention — see vault-unsealer rationale).
+        # Memory still capped — log ingestion bursts shouldn't OOM the node.
+        memory: 1Gi
+
+  # Disable scaling components — SingleBinary mode handles all roles itself.
+  read:
+    replicas: 0
+  write:
+    replicas: 0
+  backend:
+    replicas: 0
+
+  # Caches add overhead at homelab scale with no payoff (our query volume is
+  # essentially zero outside of human-driven dashboard browsing).
+  chunksCache:
+    enabled: false
+  resultsCache:
+    enabled: false
+
+  # nginx gateway in front of Loki. We expose only the gateway externally;
+  # SingleBinary listens on its own ClusterIP for in-cluster pushes from Alloy.
+  gateway:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 64Mi
+    # We ship our own ingress under templates/ for consistency.
+    ingress:
+      enabled: false
+    service:
+      type: ClusterIP
+
+  # Components we don't need on a homelab single-node cluster.
+  test:
+    enabled: false
+  lokiCanary:
+    enabled: false
+  monitoring:
+    selfMonitoring:
+      enabled: false
+    lokiCanary:
+      enabled: false
+    serviceMonitor:
+      enabled: true
+      # kube-prometheus-stack auto-discovers ServiceMonitors cluster-wide.
+      labels: {}
+
+  # No multi-tenancy; the test/preview minio is unneeded.
+  minio:
+    enabled: false

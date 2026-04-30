@@ -59,6 +59,15 @@ resource "cloudflare_record" "prometheus" {
   proxied = false
 }
 
+resource "cloudflare_record" "loki" {
+  zone_id = data.cloudflare_zone.halitdincer.zone_id
+  name    = "loki"
+  type    = "A"
+  content = "100.112.34.54"
+  ttl     = 1800
+  proxied = false
+}
+
 resource "cloudflare_record" "vault" {
   zone_id = data.cloudflare_zone.halitdincer.zone_id
   name    = "vault"

@@ -9,6 +9,8 @@
 | `homepage` | `k3s-manifests/apps/homepage/` (Helm: jameswynn/homepage@2.1.0) | Homepage dashboard (wrapper chart + custom templates) |
 | `atlantis` | `k3s-manifests/apps/atlantis/` (Helm: runatlantis/atlantis@6.3.0, image v0.31.0) | Atlantis Terraform GitOps (wrapper chart + custom templates) |
 | `monitoring` | `k3s-manifests/apps/monitoring/` (Helm: prometheus-community/kube-prometheus-stack@84.3.0) | Prometheus + Alertmanager + Grafana + node-exporter + kube-state-metrics + ntfy-relay (wrapper chart + critical PrometheusRule) |
+| `loki` | `k3s-manifests/apps/loki/` (Helm: grafana/loki@6.55.0, SingleBinary) | Loki log aggregation (10Gi local-path, 30d retention) + Grafana datasource ConfigMap |
+| `alloy` | Helm: grafana/alloy@1.8.0 (DaemonSet) | Log shipper — discovers all pods cluster-wide, forwards container logs to Loki via the K8s API |
 | `ingresses` | `k3s-manifests/ingresses/` | Ingress resources for `apps`-tier services |
 | `job-scout` | `k3s-manifests/job-scout/` | job-scout (kustomize) |
 | `vault` | Helm: hashicorp/vault@0.29.1 | Vault (standalone Raft) |
@@ -90,7 +92,7 @@ ssh root@10.10.10.1 "qm list"               # list VMs
 
 ## URLs
 
-ArgoCD: argocd.halitdincer.com | Atlantis: atlantis.halitdincer.com | Grafana: grafana.halitdincer.com | Gatus: status.halitdincer.com | Homepage: home.halitdincer.com
+ArgoCD: argocd.halitdincer.com | Atlantis: atlantis.halitdincer.com | Grafana: grafana.halitdincer.com | Gatus: status.halitdincer.com | Homepage: home.halitdincer.com | Loki: loki.halitdincer.com (gateway, debug only — primary access via Grafana datasource)
 
 ## Adding a New K3s App
 

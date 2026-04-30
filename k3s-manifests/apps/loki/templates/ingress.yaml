@@ -1,0 +1,30 @@
+---
+# Loki gateway exposed externally for direct API access (debug, ad-hoc curl
+# queries). Primary access path is Grafana → Loki datasource (in-cluster).
+#
+# Backend service is the chart-rendered loki-gateway. Loki is a subchart;
+# the Service follows the chart's own naming convention (<release>-gateway).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: loki
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - loki.halitdincer.com
+      secretName: loki-tls
+  rules:
+    - host: loki.halitdincer.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: loki-gateway
+                port:
+                  number: 80
