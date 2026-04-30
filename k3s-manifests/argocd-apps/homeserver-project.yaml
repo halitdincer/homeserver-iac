@@ -24,6 +24,7 @@ spec:
     - https://argoproj.github.io/argo-helm
     - https://charts.bitnami.com/bitnami
     - https://charts.external-secrets.io
+    - https://grafana.github.io/helm-charts
     - https://helm.coder.com/v2
     - https://helm.releases.hashicorp.com
     - https://prometheus-community.github.io/helm-charts
@@ -55,7 +56,11 @@ spec:
       namespace: job-scout-preview-*
     # kube-prometheus-stack puts a CoreDNS metrics Service in kube-system.
     - server: https://kubernetes.default.svc
+      namespace: alloy
+    - server: https://kubernetes.default.svc
       namespace: kube-system
+    - server: https://kubernetes.default.svc
+      namespace: loki
     - server: https://kubernetes.default.svc
       namespace: monitoring
     - server: https://kubernetes.default.svc
