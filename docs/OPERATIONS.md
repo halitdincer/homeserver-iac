@@ -8,9 +8,7 @@
 | `apps` | `k3s-manifests/apps/` | Coder, single-file manifests for the remaining hand-rolled services |
 | `homepage` | `k3s-manifests/apps/homepage/` (Helm: jameswynn/homepage@2.1.0) | Homepage dashboard (wrapper chart + custom templates) |
 | `atlantis` | `k3s-manifests/apps/atlantis/` (Helm: runatlantis/atlantis@6.3.0, image v0.31.0) | Atlantis Terraform GitOps (wrapper chart + custom templates) |
-| `monitoring` | `k3s-manifests/apps/monitoring/` (Helm: prometheus-community/kube-prometheus-stack@84.3.0) | Prometheus + Alertmanager + Grafana + node-exporter + kube-state-metrics + ntfy-relay (wrapper chart + critical PrometheusRule) |
-| `loki` | `k3s-manifests/apps/loki/` (Helm: grafana/loki@6.55.0, SingleBinary) | Loki log aggregation (10Gi local-path, 30d retention) + Grafana datasource ConfigMap |
-| `alloy` | Helm: grafana/alloy@1.8.0 (DaemonSet) | Log shipper — discovers all pods cluster-wide, forwards container logs to Loki via the K8s API |
+| `alloy` | Helm: grafana/alloy@1.8.0 (DaemonSet) | Cloud-bound observability agent — discovers ServiceMonitors cluster-wide and `prometheus.remote_write`s metrics to Grafana Cloud Mimir; tails container logs and `loki.write`s them to Grafana Cloud Loki. Also scrapes the Proxmox host node_exporter directly. Replaces the deleted in-cluster `monitoring` and `loki` apps. |
 | `ingresses` | `k3s-manifests/ingresses/` | Ingress resources for `apps`-tier services |
 | `job-scout` | `k3s-manifests/job-scout/` | job-scout (kustomize) |
 | `vault` | Helm: hashicorp/vault@0.29.1 | Vault (standalone Raft) |
@@ -92,7 +90,7 @@ ssh root@10.10.10.1 "qm list"               # list VMs
 
 ## URLs
 
-ArgoCD: argocd.halitdincer.com | Atlantis: atlantis.halitdincer.com | Grafana: grafana.halitdincer.com | Gatus: status.halitdincer.com | Homepage: home.halitdincer.com | Loki: loki.halitdincer.com (gateway, debug only — primary access via Grafana datasource)
+ArgoCD: argocd.halitdincer.com | Atlantis: atlantis.halitdincer.com | Gatus: status.halitdincer.com | Homepage: home.halitdincer.com | Grafana / dashboards / alerts: hosted on Grafana Cloud (your `*.grafana.net` stack — log in via grafana.com)
 
 ## Adding a New K3s App
 
@@ -115,9 +113,12 @@ ArgoCD: argocd.halitdincer.com | Atlantis: atlantis.halitdincer.com | Grafana: g
 
 ## Adding Metrics / Alerts to a K3s App
 
-The `monitoring` app installs Prometheus operator with cluster-wide CRD discovery
-(`serviceMonitorSelectorNilUsesHelmValues: false` etc.), so any namespace can
-declare metrics scraping and alerts inline:
+Alloy discovers `ServiceMonitor` CRDs cluster-wide (the
+`monitoring.coreos.com/v1` CRDs are kept around even though kube-prometheus-stack
+is gone) and remote_writes the scraped series to Grafana Cloud Mimir. Logs flow
+through Alloy's `discovery.kubernetes` → `loki.source.kubernetes` →
+Grafana Cloud Loki. So the in-cluster part is unchanged — only the storage and
+UI moved off-cluster.
 
 1. Expose `/metrics` from your app (HTTP handler on a known port, no auth).
 2. Add a `ServiceMonitor` next to the app's `Service`:
@@ -135,19 +136,22 @@ declare metrics scraping and alerts inline:
          path: /metrics
          interval: 30s
    ```
-   Prometheus picks it up within ~1 sync cycle. Targets visible at `prometheus.halitdincer.com/targets`.
-3. (Optional) Add a `PrometheusRule` in the same namespace with alerts; Alertmanager
-   routes them to ntfy-relay → ntfy.sh per the receiver config in `apps/monitoring/values.yaml`.
-4. (Optional) Drop a Grafana dashboard JSON into a ConfigMap with label
-   `grafana_dashboard: "1"` in any namespace; the Grafana sidecar imports it.
-   For homeserver-wide dashboards just drop the JSON into
-   `k3s-manifests/apps/monitoring/dashboards/` — `templates/dashboards.yaml`
-   wraps every file in that dir as a labeled ConfigMap automatically.
-   Reference Prometheus / Loki by stable uid: `prometheus` / `loki`.
+   Alloy picks it up within ~1 scrape cycle. Confirm in Cloud Grafana →
+   Explore → Mimir: `up{job="<svc>", cluster="homeserver"}` should return 1.
 
-External (non-K8s) targets like Proxmox host live in `additionalScrapeConfigs`
-inside `apps/monitoring/values.yaml`.
+3. **Alerts**: author Grafana-managed alert rules in `terraform/grafana.tf`
+   (`grafana_rule_group` resources). They route to the `ntfy` contact point
+   defined in the same file. Atlantis applies on PR merge; no in-cluster
+   PrometheusRule CRs anymore (Alertmanager + ntfy-relay were deleted with
+   the `monitoring` app).
 
-Three handcrafted dashboards live at `k3s-manifests/apps/monitoring/dashboards/`:
-`homeserver-overview`, `homeserver-logs`, `argocd`. Browse them in Grafana under
-the `homeserver` tag.
+4. **Dashboards**: drop a JSON file into `terraform/grafana-dashboards/` and
+   register it in `grafana.tf`'s `local.dashboard_json_files` map. The
+   `replace()` chain in the `grafana_dashboard` resource swaps the literal
+   `"prometheus"` / `"loki"` datasource UIDs in the JSON with the live Cloud
+   datasource UIDs at apply time, so dashboards exported from Cloud Grafana
+   can be checked in verbatim.
+
+External (non-K8s) targets like the Proxmox host live in the `prometheus.scrape`
+block of `alloy`'s River config (`k3s-manifests/argocd-apps/helm-charts-appset.yaml`,
+the `alloy` entry).

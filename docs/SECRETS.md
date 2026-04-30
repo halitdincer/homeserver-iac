@@ -10,14 +10,14 @@ Never use `kubectl create secret` or SealedSecrets for app secrets (SealedSecret
 
 | App | Vault path | K8s secret name | Namespace |
 |-----|-----------|-----------------|-----------|
-| atlantis | `secret/atlantis/config` | `atlantis-env` | atlantis |
+| atlantis | `secret/atlantis/config` (also holds `TF_VAR_*` keys for terraform vars, including `TF_VAR_grafana_auth_token`) | `atlantis-env` | atlantis |
 | job-scout | `secret/job-scout/config` | `job-scout-secret` | job-scout |
 | coder | `secret/coder/config` | `coder-secret` | coder |
 | coder (homeserver-iac workspace) | `secret/coder/homeserver-iac` | `homeserver-iac-secret` | coder |
 | coder (home-assistant workspace) | `secret/coder/home-assistant` | `home-assistant-secret` | coder |
 | homepage | `secret/homepage/config` | `homepage-secret` | default |
 | cert-manager (Cloudflare DNS-01) | `secret/cert-manager/config` (key: `cloudflare-api-token`) | `cloudflare-api-token` | cert-manager |
-| Grafana admin | `secret/monitoring/grafana` (keys: `admin-user`, `admin-password`) | `grafana-admin` | monitoring |
+| Grafana Cloud (Alloy → Cloud Mimir/Loki) | `secret/grafana-cloud/config` (keys: `prom-url`, `prom-user`, `loki-url`, `loki-user`, `api-key`) | `grafana-cloud` | alloy |
 
 ## Read / Write Commands
 
