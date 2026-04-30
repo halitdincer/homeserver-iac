@@ -195,6 +195,91 @@ spec:
                       scrape_interval = "30s"
                     }
 
+                    // === Metrics: kubelet + cAdvisor on every K8s node ===
+                    // Scraped via the API-server proxy so we don't need to
+                    // know each node's IP. Series volume is pruned aggressively
+                    // (see kubelet_filter / cadvisor_filter) to stay under the
+                    // Cloud Free-tier 10k active-series cap.
+                    discovery.kubernetes "nodes" {
+                      role = "node"
+                    }
+
+                    discovery.relabel "kubelet" {
+                      targets = discovery.kubernetes.nodes.targets
+                      rule {
+                        target_label = "__address__"
+                        replacement  = "kubernetes.default.svc.cluster.local:443"
+                      }
+                      rule {
+                        source_labels = ["__meta_kubernetes_node_name"]
+                        regex         = "(.+)"
+                        target_label  = "__metrics_path__"
+                        replacement   = "/api/v1/nodes/${1}/proxy/metrics"
+                      }
+                    }
+
+                    discovery.relabel "cadvisor" {
+                      targets = discovery.kubernetes.nodes.targets
+                      rule {
+                        target_label = "__address__"
+                        replacement  = "kubernetes.default.svc.cluster.local:443"
+                      }
+                      rule {
+                        source_labels = ["__meta_kubernetes_node_name"]
+                        regex         = "(.+)"
+                        target_label  = "__metrics_path__"
+                        replacement   = "/api/v1/nodes/${1}/proxy/metrics/cadvisor"
+                      }
+                    }
+
+                    prometheus.scrape "kubelet" {
+                      targets         = discovery.relabel.kubelet.output
+                      forward_to      = [prometheus.relabel.kubelet_filter.receiver]
+                      job_name        = "kubelet"
+                      scheme          = "https"
+                      bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+                      tls_config {
+                        ca_file              = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+                        insecure_skip_verify = true
+                      }
+                      scrape_interval = "30s"
+                    }
+
+                    prometheus.scrape "cadvisor" {
+                      targets         = discovery.relabel.cadvisor.output
+                      forward_to      = [prometheus.relabel.cadvisor_filter.receiver]
+                      job_name        = "cadvisor"
+                      scheme          = "https"
+                      bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+                      tls_config {
+                        ca_file              = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+                        insecure_skip_verify = true
+                      }
+                      scrape_interval = "30s"
+                    }
+
+                    // Keep only the kubelet metrics queried by dashboards.
+                    prometheus.relabel "kubelet_filter" {
+                      forward_to = [prometheus.relabel.add_external.receiver]
+                      rule {
+                        source_labels = ["__name__"]
+                        regex         = "kubelet_volume_stats_(available|capacity)_bytes"
+                        action        = "keep"
+                      }
+                    }
+
+                    // Keep only the cAdvisor metrics queried by dashboards,
+                    // and drop high-cardinality labels we never group by.
+                    prometheus.relabel "cadvisor_filter" {
+                      forward_to = [prometheus.relabel.add_external.receiver]
+                      rule {
+                        source_labels = ["__name__"]
+                        regex         = "container_(cpu_usage_seconds_total|memory_working_set_bytes)"
+                        action        = "keep"
+                      }
+                      rule { action = "labeldrop"; regex = "id|image|name|uid|container_id" }
+                    }
+
                     // Tag every series with cluster=homeserver so dashboards
                     // can pivot on it once we add a second source later.
                     prometheus.relabel "add_external" {
@@ -272,10 +357,10 @@ spec:
                 resources:
                   requests:
                     cpu: 100m
-                    memory: 192Mi
+                    memory: 256Mi
                   limits:
                     # No CPU limit (homelab convention).
-                    memory: 384Mi
+                    memory: 512Mi
                 # Alloy needs cluster-wide read on ServiceMonitor / PodMonitor /
                 # PrometheusRule / ConfigMap (for relabel rules) / Secret (for
                 # bearer-token refs). The chart's default RBAC covers this for
@@ -283,6 +368,51 @@ spec:
               # No serviceMonitor: Alloy is the scraper now, not a scrape target.
               serviceMonitor:
                 enabled: false
+          - name: kube-state-metrics
+            namespace: kube-state-metrics
+            repoURL: https://prometheus-community.github.io/helm-charts
+            chart: kube-state-metrics
+            targetRevision: "5.27.0"
+            values: |
+              # Exposes Kubernetes object state (Node Ready, Pod phase, …) as
+              # Prometheus metrics. Discovered by Alloy via ServiceMonitor.
+              # Series budget: ~1.5k for this homelab. Allowlist below limits
+              # the scrape to only the metric families the dashboards query, so
+              # we don't burn the Cloud Free-tier 10k cap on `kube_pod_labels`
+              # and friends.
+              metricLabelsAllowlist:
+                - "nodes=[*]"
+              metricAllowlist:
+                - "kube_node_status_condition"
+                - "kube_pod_status_phase"
+              prometheus:
+                monitor:
+                  enabled: true
+              resources:
+                requests: { cpu: 10m, memory: 32Mi }
+                limits:   { memory: 64Mi }
+          - name: prometheus-node-exporter
+            namespace: prometheus-node-exporter
+            repoURL: https://prometheus-community.github.io/helm-charts
+            chart: prometheus-node-exporter
+            targetRevision: "4.50.0"
+            values: |
+              # Per-node host metrics (CPU, memory, filesystem, network) for the
+              # K3s VM. The Proxmox host ships its own node_exporter via Alloy's
+              # `prometheus.scrape "proxmox_host"` block; this DaemonSet covers
+              # everything else. Discovered by Alloy via ServiceMonitor.
+              prometheus:
+                monitor:
+                  enabled: true
+                  # Replace the auto-generated `<pod-ip>:<port>` instance label
+                  # with the node name (e.g. "k3s"), matching the dashboard
+                  # convention used for the Proxmox scrape (instance="proxmox").
+                  relabelings:
+                    - sourceLabels: [__meta_kubernetes_pod_node_name]
+                      targetLabel: instance
+              resources:
+                requests: { cpu: 10m, memory: 24Mi }
+                limits:   { memory: 64Mi }
   template:
     metadata:
       name: '{{.name}}'

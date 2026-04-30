@@ -1,0 +1,28 @@
+---
+# Extends Alloy's default ClusterRole with permission to scrape kubelet and
+# cAdvisor metrics via the API-server proxy:
+#   GET /api/v1/nodes/<name>/proxy/metrics{,/cadvisor}
+# The upstream alloy Helm chart's RBAC grants nodes/metrics but not nodes/proxy,
+# which is what the proxy path actually checks. Without this, Alloy's
+# `prometheus.scrape "kubelet"` / `"cadvisor"` blocks return 403 on every node.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: alloy-nodes-proxy
+rules:
+  - apiGroups: [""]
+    resources: ["nodes/proxy"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: alloy-nodes-proxy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: alloy-nodes-proxy
+subjects:
+  - kind: ServiceAccount
+    name: alloy
+    namespace: alloy
