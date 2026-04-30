@@ -15,6 +15,10 @@ data:
     apiVersion: 1
     datasources:
       - name: Loki
+        # Pin a stable UID so dashboard JSON in apps/monitoring/dashboards/
+        # can reference this datasource by uid: loki without depending on
+        # whatever auto-generated uid Grafana would otherwise assign.
+        uid: loki
         type: loki
         access: proxy
         # In-cluster URL to the Loki gateway Service (chart names it

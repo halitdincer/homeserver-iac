@@ -140,6 +140,14 @@ declare metrics scraping and alerts inline:
    routes them to ntfy-relay → ntfy.sh per the receiver config in `apps/monitoring/values.yaml`.
 4. (Optional) Drop a Grafana dashboard JSON into a ConfigMap with label
    `grafana_dashboard: "1"` in any namespace; the Grafana sidecar imports it.
+   For homeserver-wide dashboards just drop the JSON into
+   `k3s-manifests/apps/monitoring/dashboards/` — `templates/dashboards.yaml`
+   wraps every file in that dir as a labeled ConfigMap automatically.
+   Reference Prometheus / Loki by stable uid: `prometheus` / `loki`.
 
 External (non-K8s) targets like Proxmox host live in `additionalScrapeConfigs`
 inside `apps/monitoring/values.yaml`.
+
+Three handcrafted dashboards live at `k3s-manifests/apps/monitoring/dashboards/`:
+`homeserver-overview`, `homeserver-logs`, `argocd`. Browse them in Grafana under
+the `homeserver` tag.

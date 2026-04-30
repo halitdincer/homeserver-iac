@@ -1,0 +1,143 @@
+{
+  "uid": "homeserver-argocd",
+  "title": "Argo CD",
+  "tags": ["homeserver", "argocd"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "30s",
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "annotations": {"list": []},
+  "templating": {"list": []},
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Total Applications",
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "count(argocd_app_info)", "refId": "A", "instant": true}],
+      "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": "blue"}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none"}
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Healthy",
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "count(argocd_app_info{health_status=\"Healthy\"})", "refId": "A", "instant": true}],
+      "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": "green"}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none"}
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Degraded",
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "count(argocd_app_info{health_status=\"Degraded\"}) or vector(0)", "refId": "A", "instant": true}],
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}, "color": {"mode": "thresholds"}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none"}
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Progressing / Missing",
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "count(argocd_app_info{health_status=~\"Progressing|Missing|Suspended|Unknown\"}) or vector(0)", "refId": "A", "instant": true}],
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}]}, "color": {"mode": "thresholds"}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none"}
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Synced",
+      "gridPos": {"h": 4, "w": 4, "x": 16, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "count(argocd_app_info{sync_status=\"Synced\"})", "refId": "A", "instant": true}],
+      "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": "green"}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none"}
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "OutOfSync",
+      "gridPos": {"h": 4, "w": 4, "x": 20, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "count(argocd_app_info{sync_status!=\"Synced\"}) or vector(0)", "refId": "A", "instant": true}],
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}]}, "color": {"mode": "thresholds"}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none"}
+    },
+    {
+      "id": 7,
+      "type": "table",
+      "title": "Applications",
+      "gridPos": {"h": 12, "w": 24, "x": 0, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "argocd_app_info", "refId": "A", "instant": true, "format": "table"}],
+      "transformations": [
+        {"id": "organize", "options": {"excludeByName": {"Time": true, "Value": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "exported_namespace": true, "prometheus": true, "autosync_enabled": true}, "indexByName": {"name": 0, "project": 1, "health_status": 2, "sync_status": 3, "dest_namespace": 4, "repo": 5}, "renameByName": {"name": "Application", "project": "Project", "health_status": "Health", "sync_status": "Sync", "dest_namespace": "Namespace", "repo": "Repo"}}}
+      ],
+      "fieldConfig": {"defaults": {"custom": {"align": "auto"}}, "overrides": [
+        {"matcher": {"id": "byName", "options": "Health"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": [{"type": "value", "options": {"Healthy": {"color": "green"}, "Degraded": {"color": "red"}, "Progressing": {"color": "yellow"}, "Missing": {"color": "orange"}, "Suspended": {"color": "purple"}, "Unknown": {"color": "gray"}}}]}]},
+        {"matcher": {"id": "byName", "options": "Sync"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": [{"type": "value", "options": {"Synced": {"color": "green"}, "OutOfSync": {"color": "orange"}, "Unknown": {"color": "gray"}}}]}]}
+      ]},
+      "options": {"showHeader": true, "sortBy": [{"displayName": "Application", "desc": false}]}
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Sync Activity (rate /5m)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum by (phase) (rate(argocd_app_sync_total[5m]))", "refId": "A", "legendFormat": "{{phase}}"}],
+      "fieldConfig": {"defaults": {"unit": "short", "custom": {"drawStyle": "line", "lineWidth": 1, "fillOpacity": 25, "stacking": {"mode": "normal"}}}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Reconciliation p95 (s)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "histogram_quantile(0.95, sum by (le, name) (rate(argocd_app_reconcile_bucket[5m])))", "refId": "A", "legendFormat": "{{name}}"}],
+      "fieldConfig": {"defaults": {"unit": "s", "custom": {"drawStyle": "line", "lineWidth": 1, "fillOpacity": 5}}, "overrides": []},
+      "options": {"legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "max"]}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Repo Server Git Requests (rate /5m)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum by (request_type) (rate(argocd_git_request_total[5m]))", "refId": "A", "legendFormat": "{{request_type}}"}],
+      "fieldConfig": {"defaults": {"unit": "short", "custom": {"drawStyle": "line", "lineWidth": 1, "fillOpacity": 10}}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Redis Cache Hit / Miss Rate (rate /5m)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum(rate(argocd_redis_request_total{request_type=\"get\"}[5m])) - sum(rate(argocd_redis_request_total{request_type=\"set\"}[5m]))", "refId": "A", "legendFormat": "cache reads"},
+        {"expr": "sum(rate(argocd_redis_request_total{request_type=\"set\"}[5m]))", "refId": "B", "legendFormat": "cache writes"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "custom": {"drawStyle": "line", "lineWidth": 1, "fillOpacity": 10}}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "id": 12,
+      "type": "logs",
+      "title": "Argo CD Logs",
+      "gridPos": {"h": 12, "w": 24, "x": 0, "y": 32},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [{"expr": "{namespace=\"argocd\"}", "refId": "A"}],
+      "options": {"showLabels": false, "showTime": true, "showCommonLabels": false, "wrapLogMessage": true, "enableLogDetails": true, "dedupStrategy": "none", "sortOrder": "Descending"}
+    }
+  ]
+}
