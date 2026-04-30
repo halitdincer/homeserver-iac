@@ -165,17 +165,57 @@ spec:
             chart: alloy
             targetRevision: "1.8.0"
             values: |
-              # Default controller.type=daemonset is what we want — one Alloy
-              # pod per node (we have one node, so one pod) tailing pod logs.
+              # Single-node DaemonSet. Alloy plays three roles:
+              #   1. Discovers ServiceMonitors cluster-wide and remote_writes the
+              #      scraped series to Grafana Cloud Mimir.
+              #   2. Scrapes the external Proxmox host node_exporter directly
+              #      (replaces the kube-prometheus-stack additionalScrapeConfigs).
+              #   3. Tails container logs from every pod via the K8s API and
+              #      pushes them to Grafana Cloud Loki.
+              # Cloud auth (basic-auth username + token) comes from the
+              # grafana-cloud Secret created by the ExternalSecret in
+              # k3s-manifests/apps/alloy-external-secret.yaml.
               alloy:
-                # River config: discover all pods cluster-wide via the K8s API
-                # and forward their container logs to the in-cluster Loki
-                # gateway. Uses loki.source.kubernetes (API-stream) instead of
-                # file-tailing /var/log/pods so we don't need a host mount.
-                # Apiserver load is fine at homelab pod count.
                 configMap:
                   create: true
                   content: |
+                    // === Metrics: ServiceMonitor discovery ===
+                    prometheus.operator.servicemonitors "all" {
+                      forward_to = [prometheus.relabel.add_external.receiver]
+                    }
+
+                    // === Metrics: external Proxmox host node_exporter ===
+                    prometheus.scrape "proxmox_host" {
+                      targets = [{
+                        __address__ = "10.10.10.1:9100",
+                        instance    = "proxmox",
+                        job         = "node",
+                      }]
+                      forward_to      = [prometheus.relabel.add_external.receiver]
+                      scrape_interval = "30s"
+                    }
+
+                    // Tag every series with cluster=homeserver so dashboards
+                    // can pivot on it once we add a second source later.
+                    prometheus.relabel "add_external" {
+                      forward_to = [prometheus.remote_write.cloud.receiver]
+                      rule {
+                        target_label = "cluster"
+                        replacement  = "homeserver"
+                      }
+                    }
+
+                    prometheus.remote_write "cloud" {
+                      endpoint {
+                        url = sys.env("PROM_URL")
+                        basic_auth {
+                          username = sys.env("PROM_USER")
+                          password = sys.env("API_KEY")
+                        }
+                      }
+                    }
+
+                    // === Logs: discover all pods, ship to Cloud Loki ===
                     discovery.kubernetes "pods" {
                       role = "pod"
                     }
@@ -203,30 +243,46 @@ spec:
                         source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
                         target_label  = "app"
                       }
+                      rule {
+                        target_label = "cluster"
+                        replacement  = "homeserver"
+                      }
                     }
 
                     loki.source.kubernetes "pods" {
                       targets    = discovery.relabel.pod_logs.output
-                      forward_to = [loki.write.default.receiver]
+                      forward_to = [loki.write.cloud.receiver]
                     }
 
-                    loki.write "default" {
+                    loki.write "cloud" {
                       endpoint {
-                        url = "http://loki-gateway.loki.svc.cluster.local/loki/api/v1/push"
+                        url = sys.env("LOKI_URL")
+                        basic_auth {
+                          username = sys.env("LOKI_USER")
+                          password = sys.env("API_KEY")
+                        }
                       }
                     }
+                # Inject Cloud Mimir / Loki URLs + creds from the grafana-cloud Secret.
+                envFrom:
+                  - secretRef:
+                      name: grafana-cloud
               controller:
                 type: daemonset
                 resources:
                   requests:
-                    cpu: 50m
-                    memory: 128Mi
+                    cpu: 100m
+                    memory: 192Mi
                   limits:
                     # No CPU limit (homelab convention).
-                    memory: 256Mi
-              # Expose Alloy's own /metrics for kube-prometheus-stack.
+                    memory: 384Mi
+                # Alloy needs cluster-wide read on ServiceMonitor / PodMonitor /
+                # PrometheusRule / ConfigMap (for relabel rules) / Secret (for
+                # bearer-token refs). The chart's default RBAC covers this for
+                # serviceMonitor + log discovery; nothing extra to add here.
+              # No serviceMonitor: Alloy is the scraper now, not a scrape target.
               serviceMonitor:
-                enabled: true
+                enabled: false
   template:
     metadata:
       name: '{{.name}}'
