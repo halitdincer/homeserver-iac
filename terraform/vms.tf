@@ -1,29 +1,3 @@
-# ── VM state-adoption imports (one-time, on first Atlantis apply) ─────────────
-# Atlantis's tfstate is empty — without these, terraform would try to CREATE
-# the existing VMs from scratch. Each block adopts the live VM into state by
-# its <node>/<vmid> identity. Safe to leave in place; subsequent applies skip
-# already-imported resources.
-
-import {
-  to = proxmox_virtual_environment_vm.immich
-  id = "pve1/100"
-}
-
-import {
-  to = proxmox_virtual_environment_vm.home_assistant
-  id = "pve1/103"
-}
-
-import {
-  to = proxmox_virtual_environment_vm.k3s
-  id = "pve1/105"
-}
-
-import {
-  to = proxmox_virtual_environment_vm.devbox
-  id = "pve1/106"
-}
-
 # Ubuntu 24.04 Noble Cloud Image
 resource "proxmox_virtual_environment_download_file" "ubuntu_cloud_image" {
   content_type        = "iso"
