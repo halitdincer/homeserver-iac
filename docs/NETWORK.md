@@ -34,10 +34,13 @@ K3s Tailscale IP: `100.112.34.54`
 | Subdomain | Type | Proxied | Access |
 |-----------|------|---------|--------|
 | argocd | A -> 100.112.34.54 | No | Tailscale only |
-| grafana | A -> 100.112.34.54 | No | Tailscale only |
-| prometheus | A -> 100.112.34.54 | No | Tailscale only |
 | vault | A -> 100.112.34.54 | No | Tailscale only |
 | proxmox | A -> 100.112.34.54 | No | Tailscale only |
+
+Grafana / Prometheus / Loki are no longer hosted in-cluster — observability
+moved to Grafana Cloud. Cloud Grafana is reached at the stack URL on
+`*.grafana.net` (public, account-gated). No DNS records under
+`halitdincer.com` for these services.
 
 ## DNS Chain
 
