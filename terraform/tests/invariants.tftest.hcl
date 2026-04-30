@@ -6,8 +6,69 @@
 # (mock_provider intercepts all provider calls).
 
 mock_provider "proxmox" {}
-mock_provider "cloudflare" {}
 mock_provider "namecheap" {}
+
+# Cloudflare resources are imported via `import` blocks in dns.tf — mock
+# providers can't process imports, so each cloudflare_dns_record needs an
+# override_resource that intercepts the import with stub values.
+mock_provider "cloudflare" {
+  override_resource {
+    target = cloudflare_dns_record.wildcard
+    values = { id = "stub" }
+  }
+  override_resource {
+    target = cloudflare_dns_record.argocd
+    values = { id = "stub" }
+  }
+  override_resource {
+    target = cloudflare_dns_record.grafana
+    values = { id = "stub" }
+  }
+  override_resource {
+    target = cloudflare_dns_record.prometheus
+    values = { id = "stub" }
+  }
+  override_resource {
+    target = cloudflare_dns_record.loki
+    values = { id = "stub" }
+  }
+  override_resource {
+    target = cloudflare_dns_record.vault
+    values = { id = "stub" }
+  }
+  override_resource {
+    target = cloudflare_dns_record.proxmox
+    values = { id = "stub" }
+  }
+  override_resource {
+    target = cloudflare_dns_record.www
+    values = { id = "stub" }
+  }
+  override_resource {
+    target = cloudflare_dns_record.mx1
+    values = { id = "stub" }
+  }
+  override_resource {
+    target = cloudflare_dns_record.mx2
+    values = { id = "stub" }
+  }
+  override_resource {
+    target = cloudflare_dns_record.apple_domain_verification
+    values = { id = "stub" }
+  }
+  override_resource {
+    target = cloudflare_dns_record.spf
+    values = { id = "stub" }
+  }
+  override_resource {
+    target = cloudflare_dns_record.dkim
+    values = { id = "stub" }
+  }
+  override_resource {
+    target = cloudflare_dns_record.dmarc
+    values = { id = "stub" }
+  }
+}
 
 # Required because these variables have no default and providers are mocked
 variables {

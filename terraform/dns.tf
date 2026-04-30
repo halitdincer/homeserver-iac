@@ -9,19 +9,99 @@ resource "namecheap_domain_records" "halitdincer" {
   ]
 }
 
-# DNS records for halitdincer.com managed via Cloudflare API
+# DNS records for halitdincer.com managed via Cloudflare API.
+#
+# Migrated from cloudflare provider v4 (cloudflare_record) to v5
+# (cloudflare_dns_record). v5 dropped cloudflare_record entirely; the schema
+# is identical for simple record types but the resource type name and the
+# data-source `filter` syntax changed (block → attribute).
 
 data "cloudflare_zone" "halitdincer" {
-  filter {
+  filter = {
     name = "halitdincer.com"
   }
+}
+
+# ── Import blocks ────────────────────────────────────────────────────────────
+# Each Cloudflare record was created out-of-band (or with a since-lost local
+# state file), so the first Atlantis apply needs to *adopt* the existing
+# records into state, not re-create them. Import block IDs are
+# `<zone_id>/<record_id>` — fill the record IDs by running, locally:
+#
+#   ZONE=$(curl -s -H "Authorization: Bearer $CF_API_TOKEN" \
+#     "https://api.cloudflare.com/client/v4/zones?name=halitdincer.com" \
+#     | jq -r '.result[0].id')
+#   curl -s -H "Authorization: Bearer $CF_API_TOKEN" \
+#     "https://api.cloudflare.com/client/v4/zones/$ZONE/dns_records?per_page=100" \
+#     | jq -r '.result[] | "\(.name) \(.type) \(.id)"'
+#
+# Then paste the IDs into the placeholders below. After Atlantis applies once,
+# the import blocks become no-ops and can be deleted in a follow-up PR.
+#
+# Format: id = "<zone_id>/<record_id>"
+
+import {
+  to = cloudflare_dns_record.wildcard
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+}
+import {
+  to = cloudflare_dns_record.argocd
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+}
+import {
+  to = cloudflare_dns_record.grafana
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+}
+import {
+  to = cloudflare_dns_record.prometheus
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+}
+import {
+  to = cloudflare_dns_record.loki
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+}
+import {
+  to = cloudflare_dns_record.vault
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+}
+import {
+  to = cloudflare_dns_record.proxmox
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+}
+import {
+  to = cloudflare_dns_record.www
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+}
+import {
+  to = cloudflare_dns_record.mx1
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+}
+import {
+  to = cloudflare_dns_record.mx2
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+}
+import {
+  to = cloudflare_dns_record.apple_domain_verification
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+}
+import {
+  to = cloudflare_dns_record.spf
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+}
+import {
+  to = cloudflare_dns_record.dkim
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+}
+import {
+  to = cloudflare_dns_record.dmarc
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
 }
 
 # ── Homeserver routing ──
 
 # Wildcard CNAME - routes all subdomains through Cloudflare Tunnel to home server
 # K3s nginx ingress handles routing to individual services
-resource "cloudflare_record" "wildcard" {
+resource "cloudflare_dns_record" "wildcard" {
   zone_id = data.cloudflare_zone.halitdincer.zone_id
   name    = "*"
   type    = "CNAME"
@@ -32,7 +112,7 @@ resource "cloudflare_record" "wildcard" {
 
 # ── Private K3s services - Tailscale-only access ──
 
-resource "cloudflare_record" "argocd" {
+resource "cloudflare_dns_record" "argocd" {
   zone_id = data.cloudflare_zone.halitdincer.zone_id
   name    = "argocd"
   type    = "A"
@@ -41,7 +121,7 @@ resource "cloudflare_record" "argocd" {
   proxied = false
 }
 
-resource "cloudflare_record" "grafana" {
+resource "cloudflare_dns_record" "grafana" {
   zone_id = data.cloudflare_zone.halitdincer.zone_id
   name    = "grafana"
   type    = "A"
@@ -50,7 +130,7 @@ resource "cloudflare_record" "grafana" {
   proxied = false
 }
 
-resource "cloudflare_record" "prometheus" {
+resource "cloudflare_dns_record" "prometheus" {
   zone_id = data.cloudflare_zone.halitdincer.zone_id
   name    = "prometheus"
   type    = "A"
@@ -59,7 +139,7 @@ resource "cloudflare_record" "prometheus" {
   proxied = false
 }
 
-resource "cloudflare_record" "loki" {
+resource "cloudflare_dns_record" "loki" {
   zone_id = data.cloudflare_zone.halitdincer.zone_id
   name    = "loki"
   type    = "A"
@@ -68,7 +148,7 @@ resource "cloudflare_record" "loki" {
   proxied = false
 }
 
-resource "cloudflare_record" "vault" {
+resource "cloudflare_dns_record" "vault" {
   zone_id = data.cloudflare_zone.halitdincer.zone_id
   name    = "vault"
   type    = "A"
@@ -77,7 +157,7 @@ resource "cloudflare_record" "vault" {
   proxied = false
 }
 
-resource "cloudflare_record" "proxmox" {
+resource "cloudflare_dns_record" "proxmox" {
   zone_id = data.cloudflare_zone.halitdincer.zone_id
   name    = "proxmox"
   type    = "A"
@@ -86,7 +166,7 @@ resource "cloudflare_record" "proxmox" {
   proxied = false
 }
 
-resource "cloudflare_record" "www" {
+resource "cloudflare_dns_record" "www" {
   zone_id = data.cloudflare_zone.halitdincer.zone_id
   name    = "www"
   type    = "CNAME"
@@ -97,7 +177,7 @@ resource "cloudflare_record" "www" {
 
 # ── iCloud Mail ──
 
-resource "cloudflare_record" "mx1" {
+resource "cloudflare_dns_record" "mx1" {
   zone_id  = data.cloudflare_zone.halitdincer.zone_id
   name     = "@"
   type     = "MX"
@@ -107,7 +187,7 @@ resource "cloudflare_record" "mx1" {
   proxied  = false
 }
 
-resource "cloudflare_record" "mx2" {
+resource "cloudflare_dns_record" "mx2" {
   zone_id  = data.cloudflare_zone.halitdincer.zone_id
   name     = "@"
   type     = "MX"
@@ -118,7 +198,7 @@ resource "cloudflare_record" "mx2" {
 }
 
 # Apple domain verification
-resource "cloudflare_record" "apple_domain_verification" {
+resource "cloudflare_dns_record" "apple_domain_verification" {
   zone_id = data.cloudflare_zone.halitdincer.zone_id
   name    = "@"
   type    = "TXT"
@@ -128,7 +208,7 @@ resource "cloudflare_record" "apple_domain_verification" {
 }
 
 # SPF - authorize iCloud to send mail for this domain
-resource "cloudflare_record" "spf" {
+resource "cloudflare_dns_record" "spf" {
   zone_id = data.cloudflare_zone.halitdincer.zone_id
   name    = "@"
   type    = "TXT"
@@ -138,7 +218,7 @@ resource "cloudflare_record" "spf" {
 }
 
 # DKIM - iCloud mail signing
-resource "cloudflare_record" "dkim" {
+resource "cloudflare_dns_record" "dkim" {
   zone_id = data.cloudflare_zone.halitdincer.zone_id
   name    = "sig1._domainkey"
   type    = "CNAME"
@@ -148,7 +228,7 @@ resource "cloudflare_record" "dkim" {
 }
 
 # DMARC - reject unauthenticated mail
-resource "cloudflare_record" "dmarc" {
+resource "cloudflare_dns_record" "dmarc" {
   zone_id = data.cloudflare_zone.halitdincer.zone_id
   name    = "_dmarc"
   type    = "TXT"
