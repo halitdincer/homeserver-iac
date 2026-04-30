@@ -5,7 +5,27 @@
 # `terraform test -test-directory=tests` and require no real credentials
 # (mock_provider intercepts all provider calls).
 
-mock_provider "proxmox" {}
+# VMs are imported via `import` blocks in vms.tf — mock providers can't
+# process imports, so each VM resource needs an override_resource that
+# intercepts the import with stub values.
+mock_provider "proxmox" {
+  override_resource {
+    target = proxmox_virtual_environment_vm.immich
+    values = { id = "pve1/100" }
+  }
+  override_resource {
+    target = proxmox_virtual_environment_vm.home_assistant
+    values = { id = "pve1/103" }
+  }
+  override_resource {
+    target = proxmox_virtual_environment_vm.k3s
+    values = { id = "pve1/105" }
+  }
+  override_resource {
+    target = proxmox_virtual_environment_vm.devbox
+    values = { id = "pve1/106" }
+  }
+}
 mock_provider "namecheap" {}
 
 # Cloudflare resources are imported via `import` blocks in dns.tf — mock
