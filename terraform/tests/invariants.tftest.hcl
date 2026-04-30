@@ -8,6 +8,7 @@
 mock_provider "proxmox" {}
 mock_provider "namecheap" {}
 mock_provider "cloudflare" {}
+mock_provider "grafana" {}
 
 # Required because these variables have no default and providers are mocked
 variables {
@@ -17,6 +18,8 @@ variables {
   namecheap_user_name  = "mock"
   namecheap_api_user   = "mock"
   namecheap_api_key    = "mock"
+  grafana_url          = "https://mock.grafana.net"
+  grafana_auth_token   = "mock"
 }
 
 # ── VM IDs ────────────────────────────────────────────────────────────────────

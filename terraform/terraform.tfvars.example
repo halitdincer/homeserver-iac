@@ -34,3 +34,20 @@ cloudflare_api_token = "your-cloudflare-api-token-here"
 namecheap_user_name = "your-namecheap-username"
 namecheap_api_user  = "your-namecheap-username"
 namecheap_api_key   = "your-namecheap-api-key"
+
+# Grafana Cloud
+# - URL: your stack URL (e.g. https://halitdincer.grafana.net)
+# - Token: create a Service Account with Admin scope at:
+#     <your-stack>.grafana.net/admin/serviceaccounts
+#   then generate a token and paste it here.
+grafana_url        = "https://your-stack.grafana.net"
+grafana_auth_token = "glsa_your_service_account_token_here"
+
+# Cloud Grafana auto-provisions Mimir + Loki datasources. Names usually start
+# with "grafanacloud-"; the defaults below match common stacks but you can
+# override if yours are renamed (Connections → Data sources to confirm).
+# grafana_mimir_datasource_name = "grafanacloud-prom"
+# grafana_loki_datasource_name  = "grafanacloud-logs"
+
+# ntfy.sh topic that Grafana Cloud webhook contact point posts to.
+# ntfy_topic = "halitdincer-homeserver"

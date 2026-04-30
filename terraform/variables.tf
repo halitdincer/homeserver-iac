@@ -47,7 +47,7 @@ variable "dns_servers" {
 variable "ssh_public_key" {
   description = "SSH public key for VM access"
   type        = string
-  default     = ""  # Set this in terraform.tfvars
+  default     = "" # Set this in terraform.tfvars
 }
 
 # Storage
@@ -94,4 +94,34 @@ variable "namecheap_api_key" {
   description = "Namecheap API key"
   type        = string
   sensitive   = true
+}
+
+# Grafana Cloud
+variable "grafana_url" {
+  description = "Grafana Cloud stack URL (e.g. https://halitdincer.grafana.net)"
+  type        = string
+}
+
+variable "grafana_auth_token" {
+  description = "Grafana Cloud service-account token (Admin scope)"
+  type        = string
+  sensitive   = true
+}
+
+variable "grafana_mimir_datasource_name" {
+  description = "Name of the auto-provisioned Mimir/Prometheus datasource in Cloud Grafana"
+  type        = string
+  default     = "grafanacloud-halitdincer-prom"
+}
+
+variable "grafana_loki_datasource_name" {
+  description = "Name of the auto-provisioned Loki datasource in Cloud Grafana"
+  type        = string
+  default     = "grafanacloud-halitdincer-logs"
+}
+
+variable "ntfy_topic" {
+  description = "ntfy.sh topic to push critical alerts to"
+  type        = string
+  default     = "halitdincer-homeserver"
 }

@@ -14,6 +14,10 @@ terraform {
       source  = "namecheap/namecheap"
       version = "~> 2.0"
     }
+    grafana = {
+      source  = "grafana/grafana"
+      version = "~> 3.0"
+    }
   }
 
   # Optional: Use local backend for now
@@ -27,7 +31,7 @@ provider "proxmox" {
   endpoint = var.proxmox_api_url
   username = var.proxmox_user
   password = var.proxmox_password
-  insecure = true  # Set to false when using valid SSL cert
+  insecure = true # Set to false when using valid SSL cert
 
   ssh {
     agent = false
@@ -43,4 +47,9 @@ provider "namecheap" {
   api_user    = var.namecheap_api_user
   api_key     = var.namecheap_api_key
   use_sandbox = false
+}
+
+provider "grafana" {
+  url  = var.grafana_url
+  auth = var.grafana_auth_token
 }
