@@ -23,78 +23,50 @@ data "cloudflare_zone" "halitdincer" {
 }
 
 # ── Import blocks ────────────────────────────────────────────────────────────
-# Each Cloudflare record was created out-of-band (or with a since-lost local
-# state file), so the first Atlantis apply needs to *adopt* the existing
-# records into state, not re-create them. Import block IDs are
-# `<zone_id>/<record_id>` — fill the record IDs by running, locally:
+# Atlantis pod has no terraform state for this repo, so the first apply must
+# *adopt* the records that already exist in Cloudflare instead of trying to
+# re-create them. Block ID format: "<zone_id>/<dns_record_id>".
 #
-#   ZONE=$(curl -s -H "Authorization: Bearer $CF_API_TOKEN" \
-#     "https://api.cloudflare.com/client/v4/zones?name=halitdincer.com" \
-#     | jq -r '.result[0].id')
-#   curl -s -H "Authorization: Bearer $CF_API_TOKEN" \
-#     "https://api.cloudflare.com/client/v4/zones/$ZONE/dns_records?per_page=100" \
-#     | jq -r '.result[] | "\(.name) \(.type) \(.id)"'
+# Six record blocks below (argocd, prometheus, loki, proxmox, www, dkim)
+# intentionally have no import block — they are declared in dns.tf but were
+# never applied; Atlantis will *create* them on first apply. Confirmed by:
+#   curl https://api.cloudflare.com/client/v4/zones/<zone>/dns_records
+# returning 9 records, missing those 6.
 #
-# Then paste the IDs into the placeholders below. After Atlantis applies once,
-# the import blocks become no-ops and can be deleted in a follow-up PR.
-#
-# Format: id = "<zone_id>/<record_id>"
+# After Atlantis's first successful apply, the import blocks become no-ops
+# and a follow-up PR can delete them.
 
 import {
   to = cloudflare_dns_record.wildcard
-  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
-}
-import {
-  to = cloudflare_dns_record.argocd
-  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/098c6102da4cb48094fd9497816ed945"
 }
 import {
   to = cloudflare_dns_record.grafana
-  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
-}
-import {
-  to = cloudflare_dns_record.prometheus
-  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
-}
-import {
-  to = cloudflare_dns_record.loki
-  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/2d36cabaf6ff17d4a71d98b60766f488"
 }
 import {
   to = cloudflare_dns_record.vault
-  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
-}
-import {
-  to = cloudflare_dns_record.proxmox
-  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
-}
-import {
-  to = cloudflare_dns_record.www
-  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/8321dfca85cbf0e29b3ebd3bfdca8521"
 }
 import {
   to = cloudflare_dns_record.mx1
-  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/8d3922cc9c88466119562ff0aa8b4cd5"
 }
 import {
   to = cloudflare_dns_record.mx2
-  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/4c3a89e2079eed28c596074db9a105ba"
 }
 import {
   to = cloudflare_dns_record.apple_domain_verification
-  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/89565740f741eb3acce9d79de3ac3cb6"
 }
 import {
   to = cloudflare_dns_record.spf
-  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
-}
-import {
-  to = cloudflare_dns_record.dkim
-  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/25b1a88b4793ffa08886ecc0fdd733e0"
 }
 import {
   to = cloudflare_dns_record.dmarc
-  id = "${data.cloudflare_zone.halitdincer.zone_id}/REPLACE_WITH_RECORD_ID"
+  id = "${data.cloudflare_zone.halitdincer.zone_id}/bf25abfd2e9d7d6141179356bfe0ae8f"
 }
 
 # ── Homeserver routing ──
