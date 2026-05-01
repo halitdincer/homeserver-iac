@@ -22,7 +22,8 @@ resource "proxmox_virtual_environment_vm" "immich" {
   }
 
   memory {
-    dedicated = 17408  # 17GB (added 1GB for testing)
+    dedicated = 12288  # 12GB. Live usage ~3.5GB; 12GB leaves 3x headroom for
+    # ML/transcode spikes while freeing ~5GB on the 15GB Proxmox host.
   }
 
   bios = "ovmf"
