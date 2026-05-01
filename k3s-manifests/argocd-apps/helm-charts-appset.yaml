@@ -277,13 +277,31 @@ spec:
                         regex         = "container_(cpu_usage_seconds_total|memory_working_set_bytes)"
                         action        = "keep"
                       }
-                      rule { action = "labeldrop"; regex = "id|image|name|uid|container_id" }
+                      rule {
+                        action = "labeldrop"
+                        regex  = "id|image|name|uid|container_id"
+                      }
                     }
 
-                    // Tag every series with cluster=homeserver so dashboards
-                    // can pivot on it once we add a second source later.
+                    // Tag every series with cluster=homeserver and drop the
+                    // high-cardinality metric families we don't query. This is
+                    // the choke point for every scrape path (ServiceMonitors,
+                    // kubelet, cAdvisor, Proxmox host) before remote_write, so
+                    // one filter covers everything.
+                    //
+                    // Series-budget targets (Cloud Free tier caps at 10k):
+                    //   node_systemd_unit_state           ~1325 (Proxmox host)
+                    //   grpc_server_*                     ~1906 (argocd-server)
+                    //   workqueue_*_bucket                ~628  (controller histograms)
+                    //   controller_runtime_*_bucket       ~205
+                    // Total reclaim ~4k series.
                     prometheus.relabel "add_external" {
                       forward_to = [prometheus.remote_write.cloud.receiver]
+                      rule {
+                        source_labels = ["__name__"]
+                        regex         = "node_systemd_.*|grpc_server_.*|workqueue_.+_bucket|controller_runtime_.+_bucket"
+                        action        = "drop"
+                      }
                       rule {
                         target_label = "cluster"
                         replacement  = "homeserver"
