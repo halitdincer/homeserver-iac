@@ -375,10 +375,13 @@ spec:
                 resources:
                   requests:
                     cpu: 100m
-                    memory: 256Mi
+                    memory: 384Mi
                   limits:
                     # No CPU limit (homelab convention).
-                    memory: 512Mi
+                    # Bumped 512Mi -> 768Mi after observed steady-state at
+                    # 472Mi (kubelet+cAdvisor scrape paths from PR #14 cost
+                    # more than planned); near-OOM under any scrape spike.
+                    memory: 768Mi
                 # Alloy needs cluster-wide read on ServiceMonitor / PodMonitor /
                 # PrometheusRule / ConfigMap (for relabel rules) / Secret (for
                 # bearer-token refs). The chart's default RBAC covers this for
