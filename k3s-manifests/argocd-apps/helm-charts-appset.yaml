@@ -370,18 +370,21 @@ spec:
                 envFrom:
                   - secretRef:
                       name: grafana-cloud
-              controller:
-                type: daemonset
+                # Resource requests/limits for the alloy container itself.
+                # NOTE: must live under `alloy.resources`, NOT
+                # `controller.resources` -- the chart silently ignores the
+                # latter, which left Alloy unlimited from PR #14 through #16.
                 resources:
                   requests:
                     cpu: 100m
                     memory: 384Mi
                   limits:
                     # No CPU limit (homelab convention).
-                    # Bumped 512Mi -> 768Mi after observed steady-state at
-                    # 472Mi (kubelet+cAdvisor scrape paths from PR #14 cost
-                    # more than planned); near-OOM under any scrape spike.
+                    # 768Mi gives ~60% headroom over observed 472Mi steady-
+                    # state (kubelet + cAdvisor scrape paths from PR #14).
                     memory: 768Mi
+              controller:
+                type: daemonset
                 # Alloy needs cluster-wide read on ServiceMonitor / PodMonitor /
                 # PrometheusRule / ConfigMap (for relabel rules) / Secret (for
                 # bearer-token refs). The chart's default RBAC covers this for
