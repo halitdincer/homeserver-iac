@@ -7,4 +7,4 @@ images:
   - name: ghcr.io/halitdincer/job-scout
     newTag: latest
     newName: ghcr.io/halitdincer/job-scout
-    digest: sha256:3e1b5493c0eb617a792087349ee355251bf419b7e77ed94f7260866254b7bc05
+    digest: sha256:e59303b12380049629be152cede4de2d2281104e5a2176ad659f9a0925dcdaa3
