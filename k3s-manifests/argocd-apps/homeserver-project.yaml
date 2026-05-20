@@ -29,6 +29,7 @@ spec:
     - https://helm.releases.hashicorp.com
     - https://prometheus-community.github.io/helm-charts
     - https://stakater.github.io/stakater-charts
+    - ghcr.io/element-hq/ess-helm
 
   destinations:
     - server: https://kubernetes.default.svc
@@ -62,6 +63,8 @@ spec:
     # also hosts CoreDNS / metrics-server / kube-proxy targets we may scrape.
     - server: https://kubernetes.default.svc
       namespace: kube-system
+    - server: https://kubernetes.default.svc
+      namespace: matrix
     - server: https://kubernetes.default.svc
       namespace: personal-site
     - server: https://kubernetes.default.svc
