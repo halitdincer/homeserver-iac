@@ -15,6 +15,7 @@
 | `job-scout` | `k3s-manifests/job-scout/` | job-scout (kustomize) |
 | `vault` | Helm: hashicorp/vault@0.29.1 | Vault (standalone Raft) |
 | `external-secrets` | Helm: external-secrets@0.14.0 | ESO |
+| `matrix-stack` | Helm: element-hq/ess-helm matrix-stack@26.5.1 (OCI) | ESS Community: Synapse (matrix.halitdincer.com) + Element Web (chat.halitdincer.com) + MAS (account.halitdincer.com) + well-known delegation on `halitdincer.com/.well-known/matrix/*`. Server name is `halitdincer.com` so user IDs are `@user:halitdincer.com`. Postgres + ExternalSecret deploy from `k3s-manifests/apps/matrix.yaml`. Open federation enabled. |
 
 ## Change Workflows
 
@@ -92,7 +93,7 @@ ssh root@10.10.10.1 "qm list"               # list VMs
 
 ## URLs
 
-ArgoCD: argocd.halitdincer.com | Atlantis: atlantis.halitdincer.com | Gatus: status.halitdincer.com | Homepage: home.halitdincer.com | Grafana / dashboards / alerts: hosted on Grafana Cloud (your `*.grafana.net` stack — log in via grafana.com)
+ArgoCD: argocd.halitdincer.com | Atlantis: atlantis.halitdincer.com | Gatus: status.halitdincer.com | Homepage: home.halitdincer.com | Matrix homeserver: matrix.halitdincer.com (server name: halitdincer.com) | Element Web: chat.halitdincer.com | MAS (account/login): account.halitdincer.com | Grafana / dashboards / alerts: hosted on Grafana Cloud (your `*.grafana.net` stack — log in via grafana.com)
 
 ## Adding a New K3s App
 

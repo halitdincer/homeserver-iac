@@ -18,6 +18,7 @@ Never use `kubectl create secret` or SealedSecrets for app secrets (SealedSecret
 | homepage | `secret/homepage/config` | `homepage-secret` | default |
 | cert-manager (Cloudflare DNS-01) | `secret/cert-manager/config` (key: `cloudflare-api-token`) | `cloudflare-api-token` | cert-manager |
 | Grafana Cloud (Alloy → Cloud Mimir/Loki) | `secret/grafana-cloud/config` (keys: `prom-url`, `prom-user`, `loki-url`, `loki-user`, `api-key`) | `grafana-cloud` | alloy |
+| matrix (postgres creds for Synapse + MAS + bridges) | `secret/matrix/postgres` (keys: `admin_password`, `synapse_password`, `mas_password`, `bridges_password`) | `matrix-postgres-creds` | matrix |
 
 ## Read / Write Commands
 

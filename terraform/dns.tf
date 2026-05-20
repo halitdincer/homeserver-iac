@@ -82,6 +82,19 @@ resource "cloudflare_dns_record" "www" {
   proxied = true
 }
 
+# Apex record - routes halitdincer.com through Cloudflare Tunnel so
+# halitdincer.com/.well-known/matrix/{server,client} can be served by the
+# Matrix homeserver for federation/client delegation. Cloudflare flattens
+# CNAMEs at the zone apex automatically.
+resource "cloudflare_dns_record" "apex" {
+  zone_id = data.cloudflare_zone.halitdincer.zone_id
+  name    = "@"
+  type    = "CNAME"
+  content = "57db95ef-dc2a-4de3-be87-f5f83cf83f86.cfargotunnel.com"
+  ttl     = 1
+  proxied = true
+}
+
 # ── iCloud Mail ──
 
 resource "cloudflare_dns_record" "mx1" {

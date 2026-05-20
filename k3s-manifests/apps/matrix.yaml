@@ -1,0 +1,184 @@
+---
+# Matrix homeserver — Synapse + MAS + Element Web (ESS chart) + 3 mautrix
+# bridges (whatsapp/discord/meta) deploy on top of this infrastructure.
+#
+# Server name: halitdincer.com (user IDs like @halit:halitdincer.com)
+# Synapse:     matrix.halitdincer.com  (federation + client API)
+# Element Web: chat.halitdincer.com    (browser client)
+# MAS:         account.halitdincer.com (login/registration)
+# Well-known:  halitdincer.com/.well-known/matrix/{server,client}
+#
+# ESS chart values live in argocd-apps/helm-charts-appset.yaml (matrix-stack
+# entry). This file provisions the shared Postgres + secrets that ESS and
+# bridges connect to.
+#
+# Phase 2 (separate PR) adds mautrix-whatsapp, mautrix-discord, mautrix-meta
+# Deployments and wires their appservice registrations into Synapse via
+# synapse.extraVolumes + additional config.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: matrix
+
+---
+# Postgres credentials sourced from Vault at secret/matrix/postgres.
+# Required keys: admin_password, synapse_password, mas_password, bridges_password.
+# Sync wave -5 ensures the Secret exists before the Postgres Deployment and
+# ESS chart try to mount it.
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: matrix-postgres-creds
+  namespace: matrix
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: matrix-postgres-creds
+  dataFrom:
+    - extract:
+        key: secret/matrix/postgres
+
+---
+# Init script: postgres image runs *.sh / *.sql in /docker-entrypoint-initdb.d/
+# once, on first boot (PGDATA empty). Creates one role+DB per component.
+# Synapse's DB requires C collation and template0; the others are plain UTF8.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: matrix-postgres-init
+  namespace: matrix
+data:
+  init.sh: |
+    #!/bin/bash
+    set -euo pipefail
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
+      CREATE ROLE synapse WITH LOGIN PASSWORD '${SYNAPSE_PASSWORD}';
+      CREATE DATABASE synapse
+        WITH OWNER synapse
+             ENCODING 'UTF8'
+             LC_COLLATE 'C'
+             LC_CTYPE 'C'
+             TEMPLATE template0;
+
+      CREATE ROLE mas WITH LOGIN PASSWORD '${MAS_PASSWORD}';
+      CREATE DATABASE mas WITH OWNER mas ENCODING 'UTF8';
+
+      CREATE ROLE mautrix_whatsapp WITH LOGIN PASSWORD '${BRIDGES_PASSWORD}';
+      CREATE DATABASE mautrix_whatsapp WITH OWNER mautrix_whatsapp ENCODING 'UTF8';
+
+      CREATE ROLE mautrix_discord WITH LOGIN PASSWORD '${BRIDGES_PASSWORD}';
+      CREATE DATABASE mautrix_discord WITH OWNER mautrix_discord ENCODING 'UTF8';
+
+      CREATE ROLE mautrix_meta WITH LOGIN PASSWORD '${BRIDGES_PASSWORD}';
+      CREATE DATABASE mautrix_meta WITH OWNER mautrix_meta ENCODING 'UTF8';
+    EOSQL
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: matrix-postgres-data
+  namespace: matrix
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matrix-postgres
+  namespace: matrix
+  annotations:
+    reloader.stakater.com/auto: "true"
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: matrix-postgres
+  template:
+    metadata:
+      labels:
+        app: matrix-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_DB
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-postgres-creds
+                  key: admin_password
+            - name: SYNAPSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-postgres-creds
+                  key: synapse_password
+            - name: MAS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-postgres-creds
+                  key: mas_password
+            - name: BRIDGES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-postgres-creds
+                  key: bridges_password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: matrix-postgres-data
+        - name: init
+          configMap:
+            name: matrix-postgres-init
+            defaultMode: 0755
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: matrix-postgres
+  namespace: matrix
+spec:
+  selector:
+    app: matrix-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

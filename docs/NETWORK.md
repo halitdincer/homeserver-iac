@@ -26,6 +26,7 @@
 | Connector | `cloudflared` on Proxmox host (systemd service) |
 | Wildcard route | `*.halitdincer.com` -> `http://10.10.10.105` (K3s nginx ingress) |
 | DNS | CNAME `*` -> `<tunnel-id>.cfargotunnel.com` (proxied) |
+| Apex | CNAME `@` -> `<tunnel-id>.cfargotunnel.com` (proxied) -- needed so `halitdincer.com/.well-known/matrix/*` is reachable for Matrix federation/client delegation. Cloudflare CNAME-flattens at the apex. |
 
 ## Private Access -- Tailscale
 
