@@ -7,11 +7,6 @@ spec:
     spec:
       containers:
         - name: job-scout
-          env:
-            - name: DEBUG
-              value: "True"
-            - name: ALLOWED_HOSTS
-              value: "*"
           resources:
             requests:
               cpu: 50m

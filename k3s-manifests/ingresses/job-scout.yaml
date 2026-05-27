@@ -20,4 +20,4 @@ spec:
               service:
                 name: job-scout
                 port:
-                  number: 8000
+                  number: 8080
