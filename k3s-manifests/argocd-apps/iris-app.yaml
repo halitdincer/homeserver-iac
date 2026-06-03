@@ -1,0 +1,21 @@
+# ArgoCD Application for iris
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: iris
+  namespace: argocd
+spec:
+  project: homeserver
+  source:
+    repoURL: git@github.com:halitdincer/homeserver-iac.git
+    targetRevision: main
+    path: k3s-manifests/iris
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: iris
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

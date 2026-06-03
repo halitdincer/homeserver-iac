@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iris
+  labels:
+    app: iris
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: iris
+  template:
+    metadata:
+      labels:
+        app: iris
+    spec:
+      containers:
+        - name: iris
+          image: ghcr.io/halitdincer/iris:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: IRIS_ENV
+              value: prod
+            - name: IRIS_LOG_LEVEL
+              value: info
+            - name: IRIS_AUDIT_DB_PATH
+              value: /data/audit.db
+            - name: IRIS_STEPUP_CALLBACK_BASE_URL
+              value: https://iris.halitdincer.com
+            - name: IRIS_JWT_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: iris-secret
+                  key: JWT_SIGNING_KEY
+            - name: IRIS_NTFY_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: iris-secret
+                  key: NTFY_BASE_URL
+            - name: IRIS_NTFY_TOPIC
+              valueFrom:
+                secretKeyRef:
+                  name: iris-secret
+                  key: NTFY_TOPIC
+            - name: IRIS_NTFY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: iris-secret
+                  key: NTFY_TOKEN
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: iris-data
