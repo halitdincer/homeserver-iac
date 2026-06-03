@@ -70,6 +70,8 @@ spec:
                   name: iris-secret
                   key: HA_TOKEN
                   optional: true
+            - name: IRIS_HA_PHONE_TRACKER_ENTITY
+              value: person.halit
           volumeMounts:
             - name: data
               mountPath: /data
