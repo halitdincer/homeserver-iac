@@ -67,14 +67,15 @@ Adding a new subdomain: just create the Ingress with `host: foo.halitdincer.com`
 
 ## Edge Rate Limiting (Cloudflare)
 
-Per-IP rate limits applied at Cloudflare's edge, defined in `terraform/cloudflare_security.tf` (zone-kind `cloudflare_ruleset`, phase `http_ratelimit`). Defense-in-depth on top of the in-app `slowapi` limiters.
+Defined in `terraform/cloudflare_security.tf` (zone-kind `cloudflare_ruleset`, phase `http_ratelimit`). Defense-in-depth — the in-app `slowapi` limiters enforce tighter per-host caps at L7 (iris: 100/min, iris-mcp: 60/min); this edge rule absorbs gross abuse before it reaches k3s.
 
-| Host | Limit | Window | Action |
+| Scope | Limit | Window | Action |
 |------|-------|--------|--------|
-| `iris.halitdincer.com` | 100 req/min/IP | 60s | Block 60s |
-| `iris-mcp.halitdincer.com` | 300 req/min/IP | 60s | Block 60s (MCP allows fan-out from LLM tool chains) |
+| `iris.halitdincer.com` + `iris-mcp.halitdincer.com` | 300 req/min/IP per CF colo | 60s | Block 60s |
 
-Add a new host: append a rule to `cloudflare_ruleset.iris_rate_limit.rules` with a `(http.host eq "...")` expression. Atlantis applies on merge.
+CF Free allows **one** rate-limiting rule per zone; this rule covers both hosts via `or` in the expression. Characteristics must include `cf.colo.id` (CF processes counting at each datacenter); effective behavior is per-IP-per-colo, which tracks per-IP for any one real client.
+
+Add a new host: extend the expression with `or http.host eq "newhost.halitdincer.com"`. Atlantis applies on merge.
 
 ## Network Recovery (auto-failover)
 
