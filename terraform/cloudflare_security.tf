@@ -23,7 +23,10 @@ resource "cloudflare_ruleset" "iris_rate_limit" {
       enabled     = true
       expression  = "(http.host eq \"iris.halitdincer.com\")"
       ratelimit = {
-        characteristics     = ["ip.src"]
+        # cf.colo.id is required by CF's API — rate counting happens per
+        # datacenter, not globally. Effective limit is per-IP-per-colo,
+        # which in practice tracks per-IP for any single client.
+        characteristics     = ["ip.src", "cf.colo.id"]
         period              = 60
         requests_per_period = 100
         mitigation_timeout  = 60
@@ -35,7 +38,7 @@ resource "cloudflare_ruleset" "iris_rate_limit" {
       enabled     = true
       expression  = "(http.host eq \"iris-mcp.halitdincer.com\")"
       ratelimit = {
-        characteristics     = ["ip.src"]
+        characteristics     = ["ip.src", "cf.colo.id"]
         period              = 60
         requests_per_period = 300
         mitigation_timeout  = 60
