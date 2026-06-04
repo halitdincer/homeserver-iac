@@ -1,0 +1,21 @@
+# ArgoCD Application for iris-mcp
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: iris-mcp
+  namespace: argocd
+spec:
+  project: homeserver
+  source:
+    repoURL: git@github.com:halitdincer/homeserver-iac.git
+    targetRevision: main
+    path: k3s-manifests/iris-mcp
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: iris-mcp
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

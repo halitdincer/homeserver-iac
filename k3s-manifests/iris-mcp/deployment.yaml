@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iris-mcp
+  labels:
+    app: iris-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: iris-mcp
+  template:
+    metadata:
+      labels:
+        app: iris-mcp
+    spec:
+      containers:
+        - name: iris-mcp
+          image: ghcr.io/halitdincer/iris-mcp:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8001
+          env:
+            - name: IRIS_MCP_LOG_LEVEL
+              value: info
+            - name: IRIS_MCP_UPSTREAM_BASE_URL
+              value: http://iris.iris.svc.cluster.local:8000
+            - name: IRIS_MCP_RATE_LIMIT
+              value: 60/minute
+            - name: IRIS_MCP_BEARER
+              valueFrom:
+                secretKeyRef:
+                  name: iris-mcp-secret
+                  key: MCP_BEARER
+            - name: IRIS_MCP_UPSTREAM_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: iris-mcp-secret
+                  key: MCP_UPSTREAM_TOKEN
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
