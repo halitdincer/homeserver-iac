@@ -71,9 +71,9 @@ Defined in `terraform/cloudflare_security.tf` (zone-kind `cloudflare_ruleset`, p
 
 | Scope | Limit | Window | Action |
 |------|-------|--------|--------|
-| `iris.halitdincer.com` + `iris-mcp.halitdincer.com` | 300 req/min/IP per CF colo | 60s | Block 60s |
+| `iris.halitdincer.com` + `iris-mcp.halitdincer.com` | 50 req/10s/IP per CF colo (~300/min) | 10s | Block 60s |
 
-CF Free allows **one** rate-limiting rule per zone; this rule covers both hosts via `or` in the expression. Characteristics must include `cf.colo.id` (CF processes counting at each datacenter); effective behavior is per-IP-per-colo, which tracks per-IP for any one real client.
+CF Free constrains us to **one rule per zone** with a **fixed 10-second window**. Characteristics must include `cf.colo.id` (CF processes counting at each datacenter); effective behavior is per-IP-per-colo, which tracks per-IP for any one real client.
 
 Add a new host: extend the expression with `or http.host eq "newhost.halitdincer.com"`. Atlantis applies on merge.
 

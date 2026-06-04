@@ -6,8 +6,11 @@
 # iris-mcp: 60/min); this edge rule exists to absorb gross abuse before it
 # reaches k3s.
 #
-#   - Both hosts:       300 req/min per IP per CF colo
+#   - Both hosts:       50 req per 10s per IP per CF colo (≈300/min effective)
 #   - Block timeout:    60s
+#
+# CF Free constrains: 1 rule per zone (so one consolidated rule), period must
+# be 10s (no 60s windows), characteristics must include cf.colo.id.
 #
 # Per CF API, ratelimit characteristics MUST include cf.colo.id (counting is
 # processed at each datacenter, not globally). Effective behavior is per-IP
@@ -27,9 +30,11 @@ resource "cloudflare_ruleset" "iris_rate_limit" {
       enabled     = true
       expression  = "(http.host eq \"iris.halitdincer.com\" or http.host eq \"iris-mcp.halitdincer.com\")"
       ratelimit = {
+        # CF Free only allows period=10. 50 req per 10s ≈ 300 req/min effective.
+        # cf.colo.id is required (CF processes counting at each datacenter).
         characteristics     = ["ip.src", "cf.colo.id"]
-        period              = 60
-        requests_per_period = 300
+        period              = 10
+        requests_per_period = 50
         mitigation_timeout  = 60
       }
     },
