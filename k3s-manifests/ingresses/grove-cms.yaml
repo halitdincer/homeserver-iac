@@ -1,0 +1,23 @@
+# grove-cms - Grove CMS (multi-tenant Payload admin for agency customer sites)
+# Domain: grove.halitdincer.com  (placeholder — rename when the agency brand is chosen)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grove-cms
+  namespace: grove-cms
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: grove.halitdincer.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: grove-cms
+                port:
+                  number: 3001
