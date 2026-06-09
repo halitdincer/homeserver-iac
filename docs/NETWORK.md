@@ -65,6 +65,18 @@ Single wildcard cert `*.halitdincer.com` (+ apex) covers every public subdomain.
 
 Adding a new subdomain: just create the Ingress with `host: foo.halitdincer.com`. No `cert-manager.io/cluster-issuer` annotation, no `spec.tls` block — wildcard is inherited automatically.
 
+## Edge Rate Limiting (Cloudflare)
+
+Defined in `terraform/cloudflare_security.tf` (zone-kind `cloudflare_ruleset`, phase `http_ratelimit`). Defense-in-depth — the in-app `slowapi` limiters enforce tighter per-host caps at L7 (iris: 100/min, iris-mcp: 60/min); this edge rule absorbs gross abuse before it reaches k3s.
+
+| Scope | Limit | Window | Action |
+|------|-------|--------|--------|
+| `iris.halitdincer.com` + `iris-mcp.halitdincer.com` | 50 req/10s/IP per CF colo (~300/min) | 10s | Block 60s |
+
+CF Free constrains us to **one rule per zone** with a **fixed 10-second window**. Characteristics must include `cf.colo.id` (CF processes counting at each datacenter); effective behavior is per-IP-per-colo, which tracks per-IP for any one real client.
+
+Add a new host: extend the expression with `or http.host eq "newhost.halitdincer.com"`. Atlantis applies on merge.
+
 ## Network Recovery (auto-failover)
 
 Connection priority: LAN (`nic0`, metric 100) > WiFi (`wlp3s0`, metric 200) > Recovery

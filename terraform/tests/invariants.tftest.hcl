@@ -7,7 +7,16 @@
 
 mock_provider "proxmox" {}
 mock_provider "namecheap" {}
-mock_provider "cloudflare" {}
+mock_provider "cloudflare" {
+  # cloudflare_ruleset (v5) schema-validates zone_id as a 32-char hex string;
+  # the auto-generated mock value (8 chars) fails. Override the data source
+  # default so resources referencing it pass schema validation.
+  mock_data "cloudflare_zone" {
+    defaults = {
+      zone_id = "0123456789abcdef0123456789abcdef"
+    }
+  }
+}
 mock_provider "grafana" {}
 
 # Required because these variables have no default and providers are mocked
