@@ -13,6 +13,7 @@ Never use `kubectl create secret` or SealedSecrets for app secrets (SealedSecret
 | atlantis | `secret/atlantis/config` (also holds `TF_VAR_*` keys for terraform vars, including `TF_VAR_grafana_auth_token`) | `atlantis-env` | atlantis |
 | job-scout | `secret/job-scout/config` | `job-scout-secret` | job-scout |
 | iris | `secret/iris/config` (keys: `JWT_SIGNING_KEY`, `NTFY_BASE_URL`, `NTFY_TOPIC`, `NTFY_TOKEN`) | `iris-secret` | iris |
+| grove-cms | `secret/grove-cms/config` (keys: `PAYLOAD_SECRET`) | `grove-cms-secret` | grove-cms |
 | coder | `secret/coder/config` | `coder-secret` | coder |
 | coder (homeserver-iac workspace) | `secret/coder/homeserver-iac` | `homeserver-iac-secret` | coder |
 | coder (home-assistant workspace) | `secret/coder/home-assistant` | `home-assistant-secret` | coder |
