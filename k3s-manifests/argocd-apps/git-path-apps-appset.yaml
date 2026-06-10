@@ -31,6 +31,9 @@ spec:
           - name: atlantis
             path: k3s-manifests/apps/atlantis
             namespace: atlantis
+          - name: bid-on-time
+            path: k3s-manifests/bid-on-time
+            namespace: bid-on-time
           - name: flight-tracker
             path: k3s-manifests/flight-tracker
             namespace: flight-tracker

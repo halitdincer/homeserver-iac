@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bid-on-time
+  labels:
+    app: bid-on-time
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: bid-on-time
+  template:
+    metadata:
+      labels:
+        app: bid-on-time
+    spec:
+      containers:
+        - name: bid-on-time
+          image: ghcr.io/halitdincer/bid-on-time:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: BID_SUBMIT_ENABLED
+              value: "false"
+            - name: TENDERAI_ENV
+              value: production
+            - name: FRONTEND_URL
+              value: https://bid-on-time.halitdincer.com
+            - name: API_HOST
+              value: 0.0.0.0
+            - name: API_PORT
+              value: "8000"
+            - name: PORTAL_HEADLESS
+              value: "true"
+            - name: PORTAL_TIMEOUT_MS
+              value: "30000"
+            - name: MERX_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: bid-on-time-secret
+                  key: MERX_USERNAME
+            - name: MERX_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bid-on-time-secret
+                  key: MERX_PASSWORD
+            - name: BIDSANDTENDERS_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: bid-on-time-secret
+                  key: BIDSANDTENDERS_USERNAME
+            - name: BIDSANDTENDERS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bid-on-time-secret
+                  key: BIDSANDTENDERS_PASSWORD
+            - name: BIDDINGO_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: bid-on-time-secret
+                  key: BIDDINGO_USERNAME
+            - name: BIDDINGO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bid-on-time-secret
+                  key: BIDDINGO_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /app/backend/data
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: bid-on-time-data

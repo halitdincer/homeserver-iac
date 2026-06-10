@@ -39,6 +39,8 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: atlantis
     - server: https://kubernetes.default.svc
+      namespace: bid-on-time
+    - server: https://kubernetes.default.svc
       namespace: cert-manager
     - server: https://kubernetes.default.svc
       namespace: coder

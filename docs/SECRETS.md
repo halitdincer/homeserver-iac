@@ -11,6 +11,7 @@ Never use `kubectl create secret` or SealedSecrets for app secrets (SealedSecret
 | App | Vault path | K8s secret name | Namespace |
 |-----|-----------|-----------------|-----------|
 | atlantis | `secret/atlantis/config` (also holds `TF_VAR_*` keys for terraform vars, including `TF_VAR_grafana_auth_token`) | `atlantis-env` | atlantis |
+| bid-on-time | `secret/bid-on-time/config` (keys: `MERX_USERNAME`, `MERX_PASSWORD`, `BIDSANDTENDERS_USERNAME`, `BIDSANDTENDERS_PASSWORD`, `BIDDINGO_USERNAME`, `BIDDINGO_PASSWORD`) | `bid-on-time-secret` | bid-on-time |
 | job-scout | `secret/job-scout/config` | `job-scout-secret` | job-scout |
 | iris | `secret/iris/config` (keys: `JWT_SIGNING_KEY`, `NTFY_BASE_URL`, `NTFY_TOPIC`, `NTFY_TOKEN`) | `iris-secret` | iris |
 | grove-cms | `secret/grove-cms/config` (keys: `PAYLOAD_SECRET`) | `grove-cms-secret` | grove-cms |
