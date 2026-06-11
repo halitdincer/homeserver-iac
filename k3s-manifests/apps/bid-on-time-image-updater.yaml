@@ -1,0 +1,25 @@
+# ImageUpdater CR for bid-on-time
+# Watches ghcr.io/halitdincer/bid-on-time:latest by digest and writes
+# the resolved image digest into the kustomization on main.
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+metadata:
+  name: bid-on-time
+  namespace: argocd
+spec:
+  namespace: argocd
+  applicationRefs:
+    - namePattern: "bid-on-time"
+      images:
+        - alias: bid-on-time
+          imageName: ghcr.io/halitdincer/bid-on-time:latest
+          manifestTargets:
+            kustomize:
+              name: ghcr.io/halitdincer/bid-on-time
+          commonUpdateSettings:
+            updateStrategy: digest
+  writeBackConfig:
+    method: git
+    gitConfig:
+      branch: main
+      writeBackTarget: "kustomization:."
