@@ -15,6 +15,11 @@ argo-cd:
 
     # Mirrors the current live `argocd-cm` data captured pre-cutover.
     cm:
+      # Poll every 60s (chart default is 180s). Jitter trimmed to 10s so the
+      # effective window is 60-70s instead of 60-120s.
+      timeout.reconciliation: 60s
+      timeout.reconciliation.jitter: 10s
+
       resource.customizations.health.argocd-image-updater.argoproj.io_ImageUpdater: |-
         hs = {}
         hs.status = "Healthy"
