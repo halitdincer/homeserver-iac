@@ -32,11 +32,23 @@ spec:
               value: file:/data/grove-cms.db
             - name: NEXT_PUBLIC_SERVER_URL
               value: https://grove.halitdincer.com
+            - name: REBUILD_SERVER_URL
+              value: http://127.0.0.1:3001
+            - name: STATIC_BUILD_TO_DISK
+              value: "false"
             - name: PAYLOAD_SECRET
               valueFrom:
                 secretKeyRef:
                   name: grove-cms-secret
                   key: PAYLOAD_SECRET
+            - name: REBUILD_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: grove-cms-secret
+                  key: PAYLOAD_SECRET
+          envFrom:
+            - secretRef:
+                name: grove-sites-credentials
           volumeMounts:
             - name: data
               mountPath: /data

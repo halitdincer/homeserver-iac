@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - external-secret.yaml
+  - grove-sites-secret.sealed.yaml
   - pvc.yaml
   - deployment.yaml
   - service.yaml
