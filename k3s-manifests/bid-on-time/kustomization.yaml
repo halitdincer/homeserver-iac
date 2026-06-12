@@ -9,4 +9,4 @@ images:
   - name: ghcr.io/halitdincer/bid-on-time
     newName: ghcr.io/halitdincer/bid-on-time
     newTag: latest
-    digest: sha256:1b2fe3cdacd4727b8f32431fd57da61d3f215968691676cff0d415d1d293cc2f
+    digest: sha256:b0dbdab679106b749a6f8f76d1ddd448852599c919bacb919d7894e52d423e7e
