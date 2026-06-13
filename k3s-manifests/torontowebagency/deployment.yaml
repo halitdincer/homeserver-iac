@@ -27,7 +27,7 @@ spec:
             - scripts/seed.ts
           env:
             - name: NODE_ENV
-              value: production
+              value: development
             - name: DATABASE_URI
               value: file:/data/torontowebagency.db
             - name: MEDIA_DIR
