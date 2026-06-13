@@ -21,8 +21,10 @@ spec:
           image: ghcr.io/halitdincer/torontowebagency-ca:latest
           imagePullPolicy: Always
           command:
-            - pnpm
-            - seed
+            - node
+            - --import
+            - tsx
+            - scripts/seed.ts
           env:
             - name: NODE_ENV
               value: production
