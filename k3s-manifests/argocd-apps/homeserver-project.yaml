@@ -76,6 +76,8 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: personal-site
     - server: https://kubernetes.default.svc
+      namespace: torontowebagency
+    - server: https://kubernetes.default.svc
       namespace: prometheus-node-exporter
     - server: https://kubernetes.default.svc
       namespace: reloader

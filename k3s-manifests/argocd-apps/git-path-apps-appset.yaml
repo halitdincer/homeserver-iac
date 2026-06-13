@@ -40,6 +40,9 @@ spec:
           - name: grove-cms
             path: k3s-manifests/grove-cms
             namespace: grove-cms
+          - name: torontowebagency
+            path: k3s-manifests/torontowebagency
+            namespace: torontowebagency
           - name: homepage
             path: k3s-manifests/apps/homepage
             namespace: default

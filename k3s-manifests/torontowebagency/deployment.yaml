@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: torontowebagency
+  labels:
+    app: torontowebagency
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: torontowebagency
+  template:
+    metadata:
+      labels:
+        app: torontowebagency
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      initContainers:
+        - name: seed
+          image: ghcr.io/halitdincer/torontowebagency-ca:latest
+          imagePullPolicy: Always
+          command:
+            - pnpm
+            - seed
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: DATABASE_URI
+              value: file:/data/torontowebagency.db
+            - name: MEDIA_DIR
+              value: /data/media
+            - name: NEXT_PUBLIC_SITE_URL
+              value: https://torontowebagency.ca
+            - name: NEXT_PUBLIC_SERVER_URL
+              value: https://torontowebagency.ca
+            - name: PAYLOAD_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: torontowebagency-secret
+                  key: PAYLOAD_SECRET
+            - name: SEED_ADMIN_EMAIL
+              value: admin@torontowebagency.ca
+            - name: SEED_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: torontowebagency-secret
+                  key: SEED_ADMIN_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+      containers:
+        - name: torontowebagency
+          image: ghcr.io/halitdincer/torontowebagency-ca:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 3002
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "3002"
+            - name: DATABASE_URI
+              value: file:/data/torontowebagency.db
+            - name: MEDIA_DIR
+              value: /data/media
+            - name: NEXT_PUBLIC_SITE_URL
+              value: https://torontowebagency.ca
+            - name: NEXT_PUBLIC_SERVER_URL
+              value: https://torontowebagency.ca
+            - name: PAYLOAD_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: torontowebagency-secret
+                  key: PAYLOAD_SECRET
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /api/access
+              port: 3002
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/access
+              port: 3002
+            initialDelaySeconds: 120
+            periodSeconds: 60
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: torontowebagency-data
