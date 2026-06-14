@@ -156,6 +156,7 @@ resource "proxmox_virtual_environment_vm" "k3s" {
 
   memory {
     dedicated = 8192  # 8GB
+    floating  = 8192  # pin at 8GB; under host pressure the balloon squeezed k3s toward 6GB, thrashing the flight-tracker stack
   }
 
   bios = "ovmf"
@@ -206,7 +207,7 @@ resource "proxmox_virtual_environment_vm" "devbox" {
   description = "devbox - AI coding agents environment"
   node_name   = var.proxmox_node
   vm_id       = 106
-  on_boot     = true
+  on_boot     = false  # k3s pinned at 8GB leaves no host RAM to also run devbox (overcommit -> k3s OOM); stopped 2026-06-14, start manually if needed
 
   cpu {
     cores = 4
