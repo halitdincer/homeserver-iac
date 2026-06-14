@@ -1,0 +1,26 @@
+# ArgoCD Application for flight-tracker
+# Full-stack app (Rails API + Vite web + worker + MySQL + Redis). Unlike the path-based
+# homeserver-iac apps, the manifests live in the app repo itself (public), so this
+# points at that repo's production overlay rather than a path in homeserver-iac.
+# Replaces the former minimal placeholder that the git-path-apps AppSet generated from
+# k3s-manifests/flight-tracker (which only ran ghcr.io/halitdincer/minimal-live-flight-tracker).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: flight-tracker
+  namespace: argocd
+spec:
+  project: homeserver
+  source:
+    repoURL: https://github.com/halitdincer/flight-tracker.git
+    targetRevision: main
+    path: k8s/overlays/production
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: flight-tracker
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

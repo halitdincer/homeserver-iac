@@ -34,9 +34,6 @@ spec:
           - name: bid-on-time
             path: k3s-manifests/bid-on-time
             namespace: bid-on-time
-          - name: flight-tracker
-            path: k3s-manifests/flight-tracker
-            namespace: flight-tracker
           - name: grove-cms
             path: k3s-manifests/grove-cms
             namespace: grove-cms
