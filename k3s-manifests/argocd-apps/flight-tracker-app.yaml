@@ -24,3 +24,10 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+  # kubeseal emits `creationTimestamp: null` under the sealed template; the live object
+  # drops it, so ArgoCD otherwise shows api-secret/mysql-secret perpetually OutOfSync.
+  ignoreDifferences:
+    - group: bitnami.com
+      kind: SealedSecret
+      jsonPointers:
+        - /spec/template/metadata/creationTimestamp
