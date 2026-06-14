@@ -19,53 +19,14 @@ spec:
   generators:
     - list:
         elements:
-          - name: coder
-            namespace: coder
-            repoURL: https://helm.coder.com/v2
-            chart: coder
-            targetRevision: "2.30.1"
-            values: |
-              coder:
-                env:
-                  - name: CODER_ACCESS_URL
-                    value: "https://code.halitdincer.com"
-                  - name: CODER_POSTGRESQL_CONNECTION_URL
-                    valueFrom:
-                      secretKeyRef:
-                        name: coder-secret
-                        key: CODER_POSTGRESQL_CONNECTION_URL
-                resources:
-                  requests:
-                    cpu: 250m
-                    memory: 512Mi
-                  limits:
-                    cpu: 2000m
-                    memory: 2Gi
-                service:
-                  type: ClusterIP
-          - name: coder-postgres
-            namespace: coder
-            repoURL: https://charts.bitnami.com/bitnami
-            chart: postgresql
-            targetRevision: "18.2.0"
-            values: |
-              auth:
-                username: coder
-                database: coder
-                existingSecret: coder-secret
-                secretKeys:
-                  userPasswordKey: postgres-password
-              primary:
-                persistence:
-                  size: 10Gi
-                  storageClass: local-path
-                resources:
-                  requests:
-                    cpu: 250m
-                    memory: 512Mi
-                  limits:
-                    cpu: 1000m
-                    memory: 1Gi
+          # --- Coder temporarily disabled 2026-06-13 to free node memory ---
+          # The k3s node was sitting at ~96% memory requests, leaving no room to
+          # schedule the flight-tracker app stack. Disabling Coder (server 512Mi +
+          # postgres 512Mi) reclaims ~1Gi of requests. The two removed entries were
+          # `coder` (chart 2.30.1) and `coder-postgres` (postgresql 18.2.0); the full
+          # values blocks are preserved in git history. Because this AppSet sets
+          # preserveResourcesOnDeletion: true, the postgres PVC (10Gi) is retained, so
+          # re-adding both entries restores Coder with its database intact.
           - name: external-secrets
             namespace: external-secrets
             repoURL: https://charts.external-secrets.io

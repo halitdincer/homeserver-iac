@@ -21,6 +21,9 @@ spec:
 
   sourceRepos:
     - git@github.com:halitdincer/homeserver-iac.git
+    # flight-tracker keeps its k8s manifests in its own public repo (see
+    # argocd-apps/flight-tracker-app.yaml), so the project must permit that source.
+    - https://github.com/halitdincer/flight-tracker.git
     - https://argoproj.github.io/argo-helm
     - https://charts.bitnami.com/bitnami
     - https://charts.external-secrets.io
