@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: grove-cms
-          image: ghcr.io/halitdincer/grove-cms:sha-a0dc408ae584e8f3091204f397aa7609bcbc81ce
+          image: ghcr.io/halitdincer/grove-cms:sha-93ab2ec3bb93a65e1767673284de639e7f1d24ad
           imagePullPolicy: Always
           ports:
             - name: http
