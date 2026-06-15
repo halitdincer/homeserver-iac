@@ -31,7 +31,7 @@ spec:
             - name: DATABASE_URI
               value: file:/data/grove-cms.db
             - name: NEXT_PUBLIC_SERVER_URL
-              value: https://grove.halitdincer.com
+              value: https://cms.torontowebagency.ca
             - name: REBUILD_SERVER_URL
               value: http://127.0.0.1:3001
             - name: STATIC_BUILD_TO_DISK
