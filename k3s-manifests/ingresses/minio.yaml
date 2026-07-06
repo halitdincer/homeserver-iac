@@ -1,0 +1,27 @@
+# MinIO S3 API — grove-sites bundle publishing (GitHub Actions + local mc)
+# Domain: s3.halitdincer.com
+# Writes require MinIO credentials (grove-builder is scoped to grove-sites);
+# the bucket itself is public-read by design, Caddy serves sites from it.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minio-s3
+  namespace: minio
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "512m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: s3.halitdincer.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minio
+                port:
+                  number: 9000
