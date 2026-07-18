@@ -14,7 +14,7 @@
 | `ingresses` | `k3s-manifests/ingresses/` | Ingress resources for `apps`-tier services |
 | `job-scout` | `k3s-manifests/job-scout/` | job-scout (kustomize) |
 | `iris` | `k3s-manifests/iris/` | Personal capability API at `iris.halitdincer.com` (kustomize). FastAPI + OpenAPI surface for LLMs. Three-tier auth (public / JWT / step-up via ntfy). |
-| `grove-cms` | `k3s-manifests/grove-cms/` | Grove CMS at `grove.halitdincer.com` — multi-tenant Payload 3 admin for the web-agency customer sites. Next.js + SQLite on a PVC. Source: `halitdincer/grove` (apps/cms). |
+| `grove-cms` | `k3s-manifests/grove-cms/` | Grove CMS at `cms.torontowebagency.ca` — multi-tenant Payload 3 admin for the web-agency customer sites. Next.js + SQLite on a PVC. Source: `halitdincer/grove` (`packages/cms`). |
 | `vault` | Helm: hashicorp/vault@0.29.1 | Vault (standalone Raft) |
 | `external-secrets` | Helm: external-secrets@0.14.0 | ESO |
 | `matrix-stack` | Helm: element-hq/ess-helm matrix-stack@26.5.1 (OCI) | ESS Community: Synapse (matrix.halitdincer.com) + Element Web (chat.halitdincer.com) + MAS (account.halitdincer.com) + well-known delegation on `halitdincer.com/.well-known/matrix/*`. Server name is `halitdincer.com` so user IDs are `@user:halitdincer.com`. Postgres + ExternalSecret deploy from `k3s-manifests/apps/matrix.yaml`. Open federation enabled. |
