@@ -38,6 +38,8 @@ spec:
               value: "false"
             - name: MEDIA_STORAGE
               value: "s3"
+            - name: PAYLOAD_CORS_ORIGINS
+              value: "https://hilalvehalit.com,https://www.hilalvehalit.com,https://engagement.halitdincer.com"
             - name: PAYLOAD_SECRET
               valueFrom:
                 secretKeyRef:
