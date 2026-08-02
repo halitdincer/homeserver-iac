@@ -247,6 +247,71 @@ resource "grafana_rule_group" "critical" {
     }
   }
 
+  # ── MemoryWarning ──
+  # Early-warning tier below MemoryCritical(95%). The 2026-08-02 outage happened
+  # with the host sitting at ~93% — under the critical threshold, so nothing fired.
+  # This pages at 85% sustained for 10m to give runway before the OOM-killer acts.
+  rule {
+    name      = "MemoryWarning"
+    for       = "10m"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      datasource_uid = data.grafana_data_source.mimir.uid
+      relative_time_range {
+        from = 600
+        to   = 0
+      }
+      model = jsonencode({
+        datasource = { type = "prometheus", uid = data.grafana_data_source.mimir.uid }
+        expr       = "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100"
+        instant    = true
+        refId      = "A"
+      })
+    }
+
+    data {
+      ref_id         = "B"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+      model = local.expr_reduce
+    }
+
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+      model = jsonencode({
+        conditions = [{
+          evaluator = { params = [85], type = "gt" }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { params = [], type = "last" }
+          type      = "query"
+        }]
+        datasource = { name = "Expression", type = "__expr__", uid = "__expr__" }
+        expression = "B"
+        refId      = "C"
+        type       = "threshold"
+      })
+    }
+
+    labels = {
+      severity = "warning"
+    }
+    annotations = {
+      summary     = "Memory pressure building"
+      description = "{{ $labels.instance }} memory usage >85% for 10m — investigate before it hits the OOM threshold."
+    }
+  }
+
   # ── ProxmoxHostDown ──
   rule {
     name      = "ProxmoxHostDown"
