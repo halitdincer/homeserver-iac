@@ -1,0 +1,198 @@
+---
+# Resource protection & self-healing for homeserver VMs
+#
+# Guards against the failure mode that took photos.halitdincer.com (and every
+# other site behind the k3s ingress) offline for ~11h on 2026-08-02:
+# memory pressure OOM-killed systemd-networkd on the k3s VM, its DHCP lease
+# expired, nothing renewed it, and the NIC silently lost 10.10.10.105.
+#
+#   Layer 1  OOM-shield the network/system daemons so the kernel OOM-killer
+#            sacrifices workload pods instead of the network stack.
+#   Layer 2  A NIC self-heal watchdog that restores the primary interface
+#            (restart networkd / renew DHCP) if it ever loses its IPv4 or
+#            default route again — so an 11h outage becomes a ~1min blip.
+#   Layer 3  (k3s only) kubelet system-reserved / kube-reserved + hard
+#            eviction, so pods can never consume the RAM the OS needs; the
+#            kubelet gracefully evicts low-priority pods BEFORE the kernel
+#            OOM-killer ever fires.
+#
+# Usage (from macOS, work around the ansible fork-safety crash + Tailscale routing):
+#   cd homeserver-iac
+#   OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES ANSIBLE_HOST_KEY_CHECKING=False \
+#   ANSIBLE_SSH_ARGS="-o ProxyJump=root@100.117.57.21 -o ControlMaster=auto -o ControlPersist=60s -o StrictHostKeyChecking=no" \
+#   ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/resource-protection.yml
+#
+# (100.117.57.21 = proxmox over Tailscale; the VMs are only on the 10.10.10.0/24 LAN.)
+
+# ── Layers 1 & 2: OOM protection + NIC watchdog (all always-on Ubuntu VMs) ──
+- name: OOM-protect system daemons and deploy NIC self-heal watchdog
+  hosts: k3s:immich
+  become: true
+  vars:
+    watchdog_interval_sec: 60
+    # Daemons that should auto-restart if they ever die, and never be OOM-killed
+    protected_restart:
+      - systemd-networkd
+      - tailscaled
+    # Daemons that should never be OOM-killed (restart managed elsewhere)
+    protected_shield:
+      - systemd-udevd
+      - ssh
+
+  handlers:
+    - name: daemon-reload
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+  tasks:
+    - name: Create systemd drop-in dirs for protected daemons
+      ansible.builtin.file:
+        path: "/etc/systemd/system/{{ item }}.service.d"
+        state: directory
+        mode: "0755"
+      loop: "{{ protected_restart + protected_shield }}"
+
+    - name: OOM-shield + auto-restart for network daemons
+      ansible.builtin.copy:
+        dest: "/etc/systemd/system/{{ item }}.service.d/oom.conf"
+        mode: "0644"
+        content: |
+          [Service]
+          OOMScoreAdjust=-900
+          Restart=on-failure
+          RestartSec=5
+      loop: "{{ protected_restart }}"
+      notify: daemon-reload
+
+    - name: OOM-shield for supporting daemons
+      ansible.builtin.copy:
+        dest: "/etc/systemd/system/{{ item }}.service.d/oom.conf"
+        mode: "0644"
+        content: |
+          [Service]
+          OOMScoreAdjust=-900
+      loop: "{{ protected_shield }}"
+      notify: daemon-reload
+
+    - name: Apply OOM protection to already-running daemons (effective now, no restart)
+      ansible.builtin.shell: |
+        for s in {{ (protected_restart + protected_shield) | join(' ') }}; do
+          pid=$(systemctl show -p MainPID --value "$s" 2>/dev/null)
+          if [ -n "$pid" ] && [ "$pid" != 0 ]; then echo -900 > "/proc/$pid/oom_score_adj" 2>/dev/null || true; fi
+        done
+      changed_when: false
+
+    - name: Deploy NIC self-heal watchdog script
+      ansible.builtin.copy:
+        dest: /usr/local/sbin/nic-watchdog.sh
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          # Self-heal the primary NIC if it loses its IPv4 address or default route.
+          # Guards the 2026-08-02 root cause: networkd OOM-killed -> DHCP lease
+          # expired -> NIC lost its IP with nothing to renew it.
+          set -uo pipefail
+          log() { logger -t nic-watchdog "$*"; }
+
+          # Detect the primary physical NIC (works even when IP/route are gone).
+          IFACE="$(ip -o link show 2>/dev/null | awk -F': ' '{print $2}' \
+                   | grep -E '^(en|eth)' | grep -v '@' | head -1)"
+          [ -z "$IFACE" ] && { log "no physical NIC found"; exit 0; }
+
+          has_ipv4()    { ip -4 addr show "$IFACE" 2>/dev/null | grep -q "inet "; }
+          has_default() { ip route show default 2>/dev/null | grep -q "dev $IFACE"; }
+
+          if has_ipv4 && has_default; then exit 0; fi
+
+          log "DEGRADED: $IFACE missing IPv4/default route — healing"
+          systemctl is-active --quiet systemd-udevd    || systemctl start systemd-udevd
+          systemctl is-active --quiet systemd-networkd  || systemctl start systemd-networkd
+          networkctl reconfigure "$IFACE" 2>/dev/null || true
+          sleep 3
+          if ! has_ipv4; then
+            networkctl renew "$IFACE" 2>/dev/null \
+              || dhclient -1 -timeout 10 "$IFACE" 2>/dev/null || true
+          fi
+          if has_ipv4 && has_default; then
+            log "RECOVERED: $(ip -4 -br addr show "$IFACE")"
+          else
+            log "STILL DEGRADED after heal — will retry next tick"
+          fi
+
+    - name: Deploy NIC watchdog service unit
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/nic-watchdog.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Primary NIC self-heal watchdog
+          After=network.target
+
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/sbin/nic-watchdog.sh
+
+    - name: Deploy NIC watchdog timer unit
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/nic-watchdog.timer
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Run NIC self-heal watchdog every {{ watchdog_interval_sec }}s
+
+          [Timer]
+          OnBootSec=90
+          OnUnitActiveSec={{ watchdog_interval_sec }}
+          AccuracySec=5s
+
+          [Install]
+          WantedBy=timers.target
+
+    - name: Enable & start NIC watchdog timer
+      ansible.builtin.systemd:
+        name: nic-watchdog.timer
+        state: started
+        enabled: true
+        daemon_reload: true
+
+# ── Layer 3: k3s kubelet reserves + hard eviction (k3s node only) ──
+- name: Configure k3s kubelet resource reservations & graceful eviction
+  hosts: k3s
+  become: true
+  tasks:
+    - name: Ensure /etc/rancher/k3s exists
+      ansible.builtin.file:
+        path: /etc/rancher/k3s
+        state: directory
+        mode: "0755"
+
+    - name: Write k3s config with system/kube-reserved + hard eviction
+      ansible.builtin.copy:
+        dest: /etc/rancher/k3s/config.yaml
+        mode: "0644"
+        content: |
+          # Reserve RAM/CPU for the OS + kubelet so pods can never starve the node.
+          # Under pressure the kubelet gracefully evicts low-priority pods BEFORE
+          # the kernel OOM-killer fires on system daemons (networkd). 8GB node:
+          # ~1GB reserved -> ~7GB allocatable for pods.
+          kubelet-arg:
+            - "system-reserved=cpu=250m,memory=512Mi"
+            - "kube-reserved=cpu=250m,memory=512Mi"
+            - "eviction-hard=memory.available<500Mi,nodefs.available<10%"
+            - "eviction-minimum-reclaim=memory.available=256Mi"
+      register: k3s_config
+
+    - name: Restart k3s to apply reserves (control-plane blip; workload pods keep running)
+      ansible.builtin.systemd:
+        name: k3s
+        state: restarted
+      when: k3s_config.changed
+
+    - name: Wait for the k3s node to report Ready again
+      ansible.builtin.command: k3s kubectl get nodes --no-headers
+      register: k3s_nodes
+      changed_when: false
+      retries: 40
+      delay: 5
+      until: k3s_nodes.rc == 0 and 'NotReady' not in k3s_nodes.stdout
+      when: k3s_config.changed
