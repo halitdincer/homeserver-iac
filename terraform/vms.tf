@@ -1,11 +1,11 @@
 # Ubuntu 24.04 Noble Cloud Image
 resource "proxmox_virtual_environment_download_file" "ubuntu_cloud_image" {
-  content_type        = "iso"
-  datastore_id        = var.iso_storage
-  node_name           = var.proxmox_node
-  url                 = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
-  file_name           = "noble-server-cloudimg-amd64.img"
-  overwrite           = true
+  content_type = "iso"
+  datastore_id = var.iso_storage
+  node_name    = var.proxmox_node
+  url          = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
+  file_name    = "noble-server-cloudimg-amd64.img"
+  overwrite    = true
 }
 
 # VM 100: Immich - Photo Management
@@ -22,12 +22,13 @@ resource "proxmox_virtual_environment_vm" "immich" {
   }
 
   memory {
-    dedicated = 12288  # 12GB. Live usage ~3.5GB; 12GB leaves 3x headroom for
-    # ML/transcode spikes while freeing ~5GB on the 15GB Proxmox host.
+    dedicated = 4096 # 4GB ceiling (live usage ~3.5GB). 12GB was incoherent on a
+    # 15GB host: immich+k3s+haos alone already sum to 20GB. Reverted 2026-08-02.
+    floating = 2048 # balloon down to 2GB when idle so the host can reclaim RAM
   }
 
-  bios = "ovmf"
-  machine = "q35"
+  bios          = "ovmf"
+  machine       = "q35"
   scsi_hardware = "virtio-scsi-single"
 
   agent {
@@ -55,7 +56,7 @@ resource "proxmox_virtual_environment_vm" "immich" {
   serial_device {}
 
   usb {
-    host = "0bda:9210"  # Card reader
+    host = "0bda:9210" # Card reader
     usb3 = false
   }
 
@@ -84,15 +85,15 @@ resource "proxmox_virtual_environment_vm" "home_assistant" {
 
   cpu {
     cores = 2
-    type  = "qemu64"  # HAOS uses qemu64
+    type  = "qemu64" # HAOS uses qemu64
   }
 
   memory {
-    dedicated = 4096  # 4GB
+    dedicated = 4096 # 4GB
   }
 
-  bios = "ovmf"
-  machine = "q35"
+  bios          = "ovmf"
+  machine       = "q35"
   scsi_hardware = "virtio-scsi-pci"
   tablet_device = false
 
@@ -122,7 +123,7 @@ resource "proxmox_virtual_environment_vm" "home_assistant" {
   serial_device {}
 
   usb {
-    host = "1a86:7523"  # Zigbee coordinator
+    host = "1a86:7523" # Zigbee coordinator
     usb3 = false
   }
 
@@ -136,7 +137,7 @@ resource "proxmox_virtual_environment_vm" "home_assistant" {
       network_device,
       disk,
       started,
-      description,  # Ignore the long HTML description
+      description, # Ignore the long HTML description
     ]
   }
 }
@@ -155,11 +156,13 @@ resource "proxmox_virtual_environment_vm" "k3s" {
   }
 
   memory {
-    dedicated = 8192  # 8GB
+    dedicated = 8192 # 8GB
+    floating  = 8192 # pin at 8GB — under host pressure the balloon squeezed k3s
+    # toward 6GB and thrashed the ingress/app stack. See ansible resource-protection.yml.
   }
 
-  bios = "ovmf"
-  machine = "q35"
+  bios          = "ovmf"
+  machine       = "q35"
   scsi_hardware = "virtio-scsi-single"
 
   agent {
@@ -206,7 +209,8 @@ resource "proxmox_virtual_environment_vm" "devbox" {
   description = "devbox - AI coding agents environment"
   node_name   = var.proxmox_node
   vm_id       = 106
-  on_boot     = true
+  on_boot     = false # k3s pinned at 8GB leaves no host RAM to also run devbox
+  # (overcommit -> k3s OOM). Stopped 2026-08-02; start manually via `qm start 106`.
 
   cpu {
     cores = 4
@@ -214,7 +218,7 @@ resource "proxmox_virtual_environment_vm" "devbox" {
   }
 
   memory {
-    dedicated = 4096  # 4GB
+    dedicated = 4096 # 4GB
   }
 
   bios          = "ovmf"
