@@ -81,6 +81,7 @@ spec:
       labels:
         app: teslamate-db
     spec:
+      priorityClassName: homeserver-low
       containers:
       - name: postgres
         image: postgres:17
@@ -141,6 +142,7 @@ spec:
       labels:
         app: mosquitto
     spec:
+      priorityClassName: homeserver-low
       containers:
       - name: mosquitto
         image: eclipse-mosquitto:2
@@ -191,6 +193,7 @@ spec:
       labels:
         app: teslamate
     spec:
+      priorityClassName: homeserver-low
       containers:
       - name: teslamate
         image: teslamate/teslamate:latest
@@ -252,6 +255,7 @@ spec:
       labels:
         app: teslamate-grafana
     spec:
+      priorityClassName: homeserver-low
       containers:
       - name: grafana
         image: teslamate/grafana:latest

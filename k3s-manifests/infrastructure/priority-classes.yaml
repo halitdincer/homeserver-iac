@@ -1,0 +1,27 @@
+---
+# Priority classes for graceful eviction ordering under memory pressure.
+#
+# Higher value = preempted/evicted LATER. When the k3s kubelet must reclaim
+# memory (eviction-hard thresholds from ansible resource-protection.yml), it
+# sheds the LOWEST-priority pods first. This keeps the front door (ingress-nginx)
+# and tier-0 data paths alive while non-critical apps absorb the pressure.
+#
+# Assigned via `priorityClassName:` on pod specs:
+#   homeserver-critical -> ingress-nginx controller (all sites ride it)
+#   homeserver-low      -> teslamate stack + other non-critical/best-effort apps
+#   (unset)             -> default priority 0 for everything else
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: homeserver-critical
+value: 1000000
+globalDefault: false
+description: "Front door + tier-0 services (ingress-nginx). Evicted last under memory pressure."
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: homeserver-low
+value: -10
+globalDefault: false
+description: "Non-critical / best-effort apps (teslamate, etc). Evicted first under memory pressure."

@@ -49,6 +49,9 @@ spec:
         app.kubernetes.io/name: ingress-nginx
         app.kubernetes.io/component: controller
     spec:
+      # Front door for all *.halitdincer.com sites — never evict this under
+      # memory pressure. See k3s-manifests/infrastructure/priority-classes.yaml.
+      priorityClassName: homeserver-critical
       serviceAccountName: ingress-nginx
       containers:
       - name: controller
