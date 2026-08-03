@@ -6,18 +6,32 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: teslamate
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10" # created before the ExternalSecret below
 
 ---
-# Secrets - CHANGE THESE BEFORE DEPLOYING
-apiVersion: v1
-kind: Secret
+# Secrets sourced from Vault (secret/teslamate/config) via ExternalSecret — NOT
+# hardcoded. These were previously plaintext in this file (committed to git);
+# moved to Vault 2026-08-03. NOTE: the old values still live in git history, so
+# rotating ENCRYPTION_KEY / DATABASE_PASS is the real remediation — see PR notes.
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
 metadata:
   name: teslamate-secrets
   namespace: teslamate
-type: Opaque
-stringData:
-  ENCRYPTION_KEY: "365f265c919e9db1d1830eb6d1a415ae6dc0e70c426ffbb59ee04d691d3e81f1"
-  DATABASE_PASS: "386866b7b0e319678b0403011db5dc99"
+  annotations:
+    # Materialize the Secret before the dependent workloads sync.
+    argocd.argoproj.io/sync-wave: "-5"
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: teslamate-secrets
+  dataFrom:
+    - extract:
+        key: secret/teslamate/config
 
 ---
 # PostgreSQL PVC
