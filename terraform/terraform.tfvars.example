@@ -29,11 +29,7 @@ iso_storage  = "local"
 # Needs Zone:DNS:Edit permission for halitdincer.com
 cloudflare_api_token = "your-cloudflare-api-token-here"
 
-# Namecheap — TEMPORARY (being removed from Terraform; see dns.tf). Still needed
-# until the follow-up PR deletes the provider.
-namecheap_user_name = "your-namecheap-username"
-namecheap_api_user  = "your-namecheap-username"
-namecheap_api_key   = "your-namecheap-api-key"
+# (Namecheap NS delegation is managed manually at the registrar, not Terraform — see dns.tf.)
 
 # Grafana Cloud
 # - URL: your stack URL (e.g. https://halitdincer.grafana.net)
