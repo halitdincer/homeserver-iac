@@ -51,10 +51,11 @@ run "vm_ids_are_fixed" {
 }
 
 # ── on_boot ───────────────────────────────────────────────────────────────────
-# All VMs must start automatically when the Proxmox host boots. Without this,
-# a power outage requires manual intervention to start every VM.
+# The three always-on VMs must start automatically when the Proxmox host boots,
+# so a power outage doesn't require manual intervention to bring services back.
+# devbox is the deliberate exception (see below).
 
-run "all_vms_start_on_host_boot" {
+run "critical_vms_start_on_host_boot" {
   command = plan
 
   assert {
@@ -68,13 +69,21 @@ run "all_vms_start_on_host_boot" {
   }
 
   assert {
-    condition     = proxmox_virtual_environment_vm.devbox.on_boot == true
-    error_message = "devbox must start on host boot"
-  }
-
-  assert {
     condition     = proxmox_virtual_environment_vm.k3s.on_boot == true
     error_message = "K3s must start on host boot — it hosts all cluster services (ArgoCD, Vault, ingress, etc.)"
+  }
+}
+
+# devbox must NOT auto-start. The 15GB host is overcommitted; if devbox (4GB)
+# comes up alongside immich+k3s+haos, the k3s VM gets OOM-killed. It is started
+# manually via `qm start 106` only when needed. Changed 2026-08-02.
+
+run "devbox_does_not_start_on_host_boot" {
+  command = plan
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.devbox.on_boot == false
+    error_message = "devbox must stay on_boot=false — auto-starting it overcommits the host and OOM-kills k3s"
   }
 }
 
