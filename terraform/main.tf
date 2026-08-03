@@ -10,6 +10,9 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 5.0"
     }
+    # namecheap kept ONLY so the `removed` block in dns.tf can forget
+    # namecheap_domain_records from state (needs the provider configured to do so).
+    # Delete this + the provider block + vars in the follow-up once this applies.
     namecheap = {
       source  = "namecheap/namecheap"
       version = "~> 2.0"
@@ -42,6 +45,8 @@ provider "cloudflare" {
   api_token = var.cloudflare_api_token
 }
 
+# Temporary: required only so the `removed` block in dns.tf can forget
+# namecheap_domain_records from state. Delete in the follow-up PR once applied.
 provider "namecheap" {
   user_name   = var.namecheap_user_name
   api_user    = var.namecheap_api_user
