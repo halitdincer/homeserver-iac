@@ -1,12 +1,20 @@
-# Namecheap registrar — delegate nameservers to Cloudflare
-resource "namecheap_domain_records" "halitdincer" {
-  domain = "halitdincer.com"
-  mode   = "overwrite"
-
-  nameservers = [
-    "daphne.ns.cloudflare.com",
-    "kellen.ns.cloudflare.com",
-  ]
+# Nameserver delegation is managed MANUALLY at the registrar (Namecheap), NOT in
+# Terraform. halitdincer.com delegates to Cloudflare's nameservers:
+#   daphne.ns.cloudflare.com
+#   kellen.ns.cloudflare.com
+#
+# Removed from Terraform 2026-08-03: the Namecheap provider's API is IP-whitelist
+# -gated on a dynamic home IP (Atlantis egress). Refreshing this single
+# set-and-forget resource on every plan froze the ENTIRE pipeline whenever the
+# ISP rotated the IP. When registering a new domain, point its NS to Cloudflare
+# by hand once. The block below forgets the resource from state WITHOUT resetting
+# the live NS records; delete it (and the namecheap required_providers entry)
+# in a follow-up once this has applied.
+removed {
+  from = namecheap_domain_records.halitdincer
+  lifecycle {
+    destroy = false # forget from state only — do NOT touch the real NS records
+  }
 }
 
 # DNS records for halitdincer.com managed via Cloudflare API.

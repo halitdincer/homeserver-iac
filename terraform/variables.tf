@@ -77,7 +77,8 @@ variable "cloudflare_api_token" {
   sensitive   = true
 }
 
-# Namecheap (registrar — manages nameserver delegation to Cloudflare)
+# Namecheap — TEMPORARY: kept only so the `removed` block in dns.tf can forget the
+# registrar resource from state. Delete these + the provider block in the follow-up.
 variable "namecheap_user_name" {
   description = "Namecheap account username"
   type        = string

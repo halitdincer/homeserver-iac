@@ -100,14 +100,5 @@ run "dns_zone_is_correct" {
   }
 }
 
-# ── Registrar safety ───────────────────────────────────────────────────────
-# Nameservers must point to Cloudflare. Changing this breaks all DNS resolution.
-
-run "nameservers_point_to_cloudflare" {
-  command = plan
-
-  assert {
-    condition     = contains(namecheap_domain_records.halitdincer.nameservers, "daphne.ns.cloudflare.com")
-    error_message = "Nameservers must include daphne.ns.cloudflare.com — changing this breaks DNS"
-  }
-}
+# Registrar (nameserver delegation) is no longer managed in Terraform — it's set
+# manually at Namecheap. See the note in dns.tf. Nothing to assert here.
