@@ -30,6 +30,7 @@ docs/               Focused documentation (see below)
 
 | Doc | Content |
 |-----|---------|
+| [Hardware](docs/HARDWARE.md) | Host specs, storage, NICs, USB passthrough, limits |
 | [Operations](docs/OPERATIONS.md) | K3s apps, workflows, SSH, Coder templates |
 | [Network](docs/NETWORK.md) | Topology, Cloudflare Tunnel, Tailscale, DNS |
 | [Backups](docs/BACKUPS.md) | Strategy, Ansible playbooks, verification |
