@@ -30,6 +30,38 @@ spec:
               value: info
             - name: IRIS_AUDIT_DB_PATH
               value: /data/audit.db
+            - name: IRIS_LABELS_DB_PATH
+              value: /data/labels.db
+            # Reads go direct to Tesla; commands go through the signing
+            # sidecar below on localhost. See iris docs/TESLA.md.
+            - name: IRIS_TESLA_PROXY_BASE_URL
+              value: https://127.0.0.1:4443
+            - name: IRIS_TESLA_PUBLIC_KEY_PATH
+              value: /tesla-keys/com.tesla.3p.public-key.pem
+            - name: IRIS_TESLA_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: iris-secret
+                  key: TESLA_CLIENT_ID
+                  optional: true
+            - name: IRIS_TESLA_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: iris-secret
+                  key: TESLA_CLIENT_SECRET
+                  optional: true
+            - name: IRIS_TESLA_REFRESH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: iris-secret
+                  key: TESLA_REFRESH_TOKEN
+                  optional: true
+            - name: IRIS_TESLA_VIN
+              valueFrom:
+                secretKeyRef:
+                  name: iris-secret
+                  key: TESLA_VIN
+                  optional: true
             - name: IRIS_STEPUP_CALLBACK_BASE_URL
               value: https://iris.halitdincer.com
             - name: IRIS_JWT_SIGNING_KEY
@@ -75,6 +107,9 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            - name: tesla-keys
+              mountPath: /tesla-keys
+              readOnly: true
           livenessProbe:
             httpGet:
               path: /healthz
@@ -98,7 +133,62 @@ spec:
             limits:
               cpu: 500m
               memory: 256Mi
+        # ------------------------------------------------------------------
+        # Tesla Vehicle Command signing proxy.
+        #
+        # Every Tesla built after ~2021 rejects unsigned commands, so unlock /
+        # navigate / climate must be signed with the private half of the key
+        # whose public half is served at
+        # https://iris.halitdincer.com/.well-known/appspecific/com.tesla.3p.public-key.pem
+        #
+        # The proxy listens on loopback only — it is reachable from the iris
+        # container in the same pod and from nowhere else. It holds the private
+        # key; iris never sees it.
+        #
+        # VERIFY BEFORE FIRST DEPLOY: image tag and flag names track the
+        # upstream teslamotors/vehicle-command release you pin. A wrong flag
+        # here fails closed (commands 502), it does not fail silently.
+        # ------------------------------------------------------------------
+        - name: tesla-http-proxy
+          image: ghcr.io/teslamotors/vehicle-command/tesla-http-proxy:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - -host=127.0.0.1
+            - -port=4443
+            - -key-file=/tesla-keys/private-key.pem
+            - -cert=/tesla-proxy-tls/tls.crt
+            - -tls-key=/tesla-proxy-tls/tls.key
+            - -verbose
+          ports:
+            - name: tesla-proxy
+              containerPort: 4443
+          volumeMounts:
+            - name: tesla-keys
+              mountPath: /tesla-keys
+              readOnly: true
+            - name: tesla-proxy-tls
+              mountPath: /tesla-proxy-tls
+              readOnly: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: iris-data
+        # Vehicle Command keypair. Created out of band — see iris docs/TESLA.md.
+        # NOT managed by External Secrets: the private key never goes to Vault's
+        # generic config path, so it cannot leak into the app container's env.
+        - name: tesla-keys
+          secret:
+            secretName: iris-tesla-keys
+            optional: true
+        # Self-signed TLS for the loopback proxy listener.
+        - name: tesla-proxy-tls
+          secret:
+            secretName: iris-tesla-proxy-tls
+            optional: true
