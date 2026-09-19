@@ -145,12 +145,12 @@ spec:
         # container in the same pod and from nowhere else. It holds the private
         # key; iris never sees it.
         #
-        # VERIFY BEFORE FIRST DEPLOY: image tag and flag names track the
-        # upstream teslamotors/vehicle-command release you pin. A wrong flag
-        # here fails closed (commands 502), it does not fail silently.
+        # Image and flags verified against tesla/vehicle-command 0.4.1
+        # (`kubectl run ... -- -h`). Pinned, not :latest — this container holds
+        # the key that can unlock the car.
         # ------------------------------------------------------------------
         - name: tesla-http-proxy
-          image: ghcr.io/teslamotors/vehicle-command/tesla-http-proxy:latest
+          image: docker.io/tesla/vehicle-command:0.4.1
           imagePullPolicy: IfNotPresent
           args:
             - -host=127.0.0.1
@@ -158,7 +158,6 @@ spec:
             - -key-file=/tesla-keys/private-key.pem
             - -cert=/tesla-proxy-tls/tls.crt
             - -tls-key=/tesla-proxy-tls/tls.key
-            - -verbose
           ports:
             - name: tesla-proxy
               containerPort: 4443
