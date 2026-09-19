@@ -41,6 +41,8 @@ spec:
             # four refs back to iris-secret when convenient.
             - name: IRIS_TESLA_PROXY_BASE_URL
               value: https://127.0.0.1:4443
+            - name: IRIS_TESLA_PROXY_CA_PATH
+              value: /tesla-proxy-tls/tls.crt
             - name: IRIS_TESLA_PUBLIC_KEY_PATH
               value: /tesla-keys/com.tesla.3p.public-key.pem
             - name: IRIS_TESLA_CLIENT_ID
@@ -114,6 +116,9 @@ spec:
               mountPath: /data
             - name: tesla-keys
               mountPath: /tesla-keys
+              readOnly: true
+            - name: tesla-proxy-tls
+              mountPath: /tesla-proxy-tls
               readOnly: true
           livenessProbe:
             httpGet:
