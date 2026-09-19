@@ -34,6 +34,11 @@ spec:
               value: /data/labels.db
             # Reads go direct to Tesla; commands go through the signing
             # sidecar below on localhost. See iris docs/TESLA.md.
+            #
+            # Tesla credentials come from iris-tesla-config rather than the
+            # ExternalSecret: they were provisioned before Vault write access
+            # was available. Move them to secret/iris/config and flip these
+            # four refs back to iris-secret when convenient.
             - name: IRIS_TESLA_PROXY_BASE_URL
               value: https://127.0.0.1:4443
             - name: IRIS_TESLA_PUBLIC_KEY_PATH
@@ -41,25 +46,25 @@ spec:
             - name: IRIS_TESLA_CLIENT_ID
               valueFrom:
                 secretKeyRef:
-                  name: iris-secret
+                  name: iris-tesla-config
                   key: TESLA_CLIENT_ID
                   optional: true
             - name: IRIS_TESLA_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: iris-secret
+                  name: iris-tesla-config
                   key: TESLA_CLIENT_SECRET
                   optional: true
             - name: IRIS_TESLA_REFRESH_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: iris-secret
+                  name: iris-tesla-config
                   key: TESLA_REFRESH_TOKEN
                   optional: true
             - name: IRIS_TESLA_VIN
               valueFrom:
                 secretKeyRef:
-                  name: iris-secret
+                  name: iris-tesla-config
                   key: TESLA_VIN
                   optional: true
             - name: IRIS_STEPUP_CALLBACK_BASE_URL

@@ -50,6 +50,18 @@ spec:
                 secretKeyRef:
                   name: grove-cms-secret
                   key: PAYLOAD_SECRET
+            # Auto-publish on CMS save: the afterChange hook fires a GitHub
+            # repository_dispatch that runs the cms-publish workflow. optional:true
+            # so the pod runs (hook no-ops) until the token is added to Vault
+            # (secret/grove-cms/config → GITHUB_DISPATCH_TOKEN).
+            - name: GITHUB_REPO
+              value: halitdincer/grove
+            - name: GITHUB_DISPATCH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: grove-cms-secret
+                  key: GITHUB_DISPATCH_TOKEN
+                  optional: true
           envFrom:
             - secretRef:
                 name: grove-sites-credentials
