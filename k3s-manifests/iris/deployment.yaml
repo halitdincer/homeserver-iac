@@ -41,6 +41,10 @@ spec:
             # four refs back to iris-secret when convenient.
             - name: IRIS_TESLA_PROXY_BASE_URL
               value: https://127.0.0.1:4443
+            # Rotated refresh tokens land on the PVC and outrank the secret,
+            # so a restart does not fall back to an invalidated token.
+            - name: IRIS_TESLA_REFRESH_TOKEN_PATH
+              value: /data/tesla_refresh_token
             - name: IRIS_TESLA_PROXY_CA_PATH
               value: /tesla-proxy-tls/tls.crt
             - name: IRIS_TESLA_PUBLIC_KEY_PATH
