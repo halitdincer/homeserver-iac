@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: bid-on-time-data
+  name: actual-budget-data
 spec:
   accessModes:
     - ReadWriteOnce

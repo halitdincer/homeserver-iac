@@ -11,17 +11,14 @@ Never use `kubectl create secret` or SealedSecrets for app secrets (SealedSecret
 | App | Vault path | K8s secret name | Namespace |
 |-----|-----------|-----------------|-----------|
 | atlantis | `secret/atlantis/config` (also holds `TF_VAR_*` keys for terraform vars, including `TF_VAR_grafana_auth_token`) | `atlantis-env` | atlantis |
-| bid-on-time | `secret/bid-on-time/config` (keys: `MERX_USERNAME`, `MERX_PASSWORD`, `BIDSANDTENDERS_USERNAME`, `BIDSANDTENDERS_PASSWORD`, `BIDDINGO_USERNAME`, `BIDDINGO_PASSWORD`) | `bid-on-time-secret` | bid-on-time |
 | job-scout | `secret/job-scout/config` | `job-scout-secret` | job-scout |
 | iris | `secret/iris/config` (keys: `JWT_SIGNING_KEY`, `NTFY_BASE_URL`, `NTFY_TOPIC`, `NTFY_TOKEN`) | `iris-secret` | iris |
-| grove-cms | `secret/grove-cms/config` (keys: `PAYLOAD_SECRET`) | `grove-cms-secret` | grove-cms |
 | coder | `secret/coder/config` | `coder-secret` | coder |
 | coder (homeserver-iac workspace) | `secret/coder/homeserver-iac` | `homeserver-iac-secret` | coder |
 | coder (home-assistant workspace) | `secret/coder/home-assistant` | `home-assistant-secret` | coder |
 | homepage | `secret/homepage/config` | `homepage-secret` | default |
 | cert-manager (Cloudflare DNS-01) | `secret/cert-manager/config` (key: `cloudflare-api-token`) | `cloudflare-api-token` | cert-manager |
 | Grafana Cloud (Alloy → Cloud Mimir/Loki) | `secret/grafana-cloud/config` (keys: `prom-url`, `prom-user`, `loki-url`, `loki-user`, `api-key`) | `grafana-cloud` | alloy |
-| matrix (postgres creds for Synapse + MAS + bridges) | `secret/matrix/postgres` (keys: `admin_password`, `synapse_password`, `mas_password`, `bridges_password`) | `matrix-postgres-creds` | matrix |
 
 ## Read / Write Commands
 

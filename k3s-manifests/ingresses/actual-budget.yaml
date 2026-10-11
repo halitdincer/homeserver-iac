@@ -1,24 +1,23 @@
-# bid-on-time - TenderAI Bid Ops
-# Domain: bid-on-time.halitdincer.com
+# actual-budget - Actual Budget (personal finance)
+# Domain: budget.halitdincer.com
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: bid-on-time
-  namespace: bid-on-time
+  name: actual-budget
+  namespace: actual-budget
   annotations:
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: "100m"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
 spec:
   ingressClassName: nginx
   rules:
-    - host: bid-on-time.halitdincer.com
+    - host: budget.halitdincer.com
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: bid-on-time
+                name: actual-budget
                 port:
-                  number: 8000
+                  number: 5006

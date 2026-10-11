@@ -12,12 +12,11 @@
 | `kube-state-metrics` | Helm: prometheus-community/kube-state-metrics@5.27.0 | Exposes Kubernetes object state (Node Ready, Pod phase) as Prometheus metrics. Scraped by Alloy via auto-generated ServiceMonitor. Allowlist limits the scrape to only the metric families the dashboards query. |
 | `prometheus-node-exporter` | Helm: prometheus-community/prometheus-node-exporter@4.50.0 (DaemonSet) | Per-node host metrics (CPU, memory, filesystem) for the K3s VM. Scraped by Alloy via auto-generated ServiceMonitor. Pairs with the external `prometheus.scrape "proxmox_host"` in Alloy's River config that covers the Proxmox host. |
 | `ingresses` | `k3s-manifests/ingresses/` | Ingress resources for `apps`-tier services |
+| `actual-budget` | `k3s-manifests/actual-budget/` | Actual Budget at `budget.halitdincer.com` (kustomize). `actualbudget/actual-server` + SQLite on a PVC; the server password is set on first visit (no Vault secret). |
 | `job-scout` | `k3s-manifests/job-scout/` | job-scout (kustomize) |
 | `iris` | `k3s-manifests/iris/` | Personal capability API at `iris.halitdincer.com` (kustomize). FastAPI + OpenAPI surface for LLMs. Three-tier auth (public / JWT / step-up via ntfy). |
-| `grove-cms` | `k3s-manifests/grove-cms/` | Grove CMS at `cms.torontowebagency.ca` — multi-tenant Payload 3 admin for the web-agency customer sites. Next.js + SQLite on a PVC. Source: `halitdincer/grove` (`packages/cms`). |
 | `vault` | Helm: hashicorp/vault@0.29.1 | Vault (standalone Raft) |
 | `external-secrets` | Helm: external-secrets@0.14.0 | ESO |
-| `matrix-stack` | Helm: element-hq/ess-helm matrix-stack@26.5.1 (OCI) | ESS Community: Synapse (matrix.halitdincer.com) + Element Web (chat.halitdincer.com) + MAS (account.halitdincer.com) + well-known delegation on `halitdincer.com/.well-known/matrix/*`. Server name is `halitdincer.com` so user IDs are `@user:halitdincer.com`. Postgres + ExternalSecret deploy from `k3s-manifests/apps/matrix.yaml`. Open federation enabled. |
 
 ## Change Workflows
 
@@ -95,7 +94,7 @@ ssh root@10.10.10.1 "qm list"               # list VMs
 
 ## URLs
 
-ArgoCD: argocd.halitdincer.com | Atlantis: atlantis.halitdincer.com | Gatus: status.halitdincer.com | Homepage: home.halitdincer.com | Matrix homeserver: matrix.halitdincer.com (server name: halitdincer.com) | Element Web: chat.halitdincer.com | MAS (account/login): account.halitdincer.com | Grafana / dashboards / alerts: hosted on Grafana Cloud (your `*.grafana.net` stack — log in via grafana.com)
+ArgoCD: argocd.halitdincer.com | Atlantis: atlantis.halitdincer.com | Gatus: status.halitdincer.com | Homepage: home.halitdincer.com | Grafana / dashboards / alerts: hosted on Grafana Cloud (your `*.grafana.net` stack — log in via grafana.com)
 
 ## Adding a New K3s App
 

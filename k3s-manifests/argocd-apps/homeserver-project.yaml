@@ -38,11 +38,11 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: argocd
     - server: https://kubernetes.default.svc
+      namespace: actual-budget
+    - server: https://kubernetes.default.svc
       namespace: argo-rollouts
     - server: https://kubernetes.default.svc
       namespace: atlantis
-    - server: https://kubernetes.default.svc
-      namespace: bid-on-time
     - server: https://kubernetes.default.svc
       namespace: cert-manager
     - server: https://kubernetes.default.svc
@@ -74,8 +74,6 @@ spec:
     # also hosts CoreDNS / metrics-server / kube-proxy targets we may scrape.
     - server: https://kubernetes.default.svc
       namespace: kube-system
-    - server: https://kubernetes.default.svc
-      namespace: matrix
     # minio itself is a hand-managed Helm release; only its ingress is GitOps'd.
     - server: https://kubernetes.default.svc
       namespace: minio
@@ -87,8 +85,6 @@ spec:
       namespace: prometheus-node-exporter
     - server: https://kubernetes.default.svc
       namespace: reloader
-    - server: https://kubernetes.default.svc
-      namespace: teslamate
     - server: https://kubernetes.default.svc
       namespace: vault
 
