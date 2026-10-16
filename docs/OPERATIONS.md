@@ -15,6 +15,7 @@
 | `actual-budget` | `k3s-manifests/actual-budget/` | Actual Budget at `budget.halitdincer.com` (kustomize). `actualbudget/actual-server` + SQLite on a PVC; the server password is set on first visit (no Vault secret). |
 | `job-scout` | `k3s-manifests/job-scout/` | job-scout (kustomize) |
 | `iris` | `k3s-manifests/iris/` | Personal capability API at `iris.halitdincer.com` (kustomize). FastAPI + OpenAPI surface for LLMs. Three-tier auth (public / JWT / step-up via ntfy). |
+| `rahle` | `k3s-manifests/rahle/` | rahle at `rahle.halitdincer.com` (kustomize): the web app, HTTP API and MCP (`/mcp`) in one `ghcr.io/halitdincer/rahle` pod, plus a pgvector Postgres StatefulSet. Behind a Cloudflare Access application; the library is loaded from the laptop with `rahle-library restore` (see the rahle repo's `docs/deploy.md`). |
 | `vault` | Helm: hashicorp/vault@0.29.1 | Vault (standalone Raft) |
 | `external-secrets` | Helm: external-secrets@0.14.0 | ESO |
 

@@ -1,0 +1,25 @@
+# rahle - private library of Hizmet and classical Islamic texts (web app, API and MCP at /mcp)
+# Domain: rahle.halitdincer.com, behind a Cloudflare Access application (the wildcard tunnel route already reaches nginx)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rahle
+  namespace: rahle
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # whole Documents are several MB of JSON
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-body-size: "8m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: rahle.halitdincer.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rahle
+                port:
+                  number: 8000

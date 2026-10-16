@@ -1,0 +1,79 @@
+# pgvector Postgres for rahle: the `postgres` database holds the live-library pointer, `readers` holds notes, highlights and
+# positions (never swapped), and each restored snapshot becomes a `library_<version>` database (ADR 0007).
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rahle-db
+  labels:
+    app: rahle-db
+spec:
+  serviceName: rahle-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rahle-db
+  template:
+    metadata:
+      labels:
+        app: rahle-db
+    spec:
+      containers:
+        - name: postgres
+          image: pgvector/pgvector:pg17
+          args:
+            # small host (about 2.7 GiB free at the pilot, ADR 0005): keep Postgres modest
+            - -c
+            - shared_buffers=256MB
+            - -c
+            - work_mem=16MB
+            - -c
+            - max_connections=40
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: rahle
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rahle-secret
+                  key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "rahle"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1536Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 12Gi # the library database is about 2 GiB; a restore briefly holds two copies
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rahle-db
+spec:
+  selector:
+    app: rahle-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres

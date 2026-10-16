@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rahle
+  labels:
+    app: rahle
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: rahle
+  template:
+    metadata:
+      labels:
+        app: rahle
+    spec:
+      containers:
+        - name: rahle
+          # the web app, the HTTP API and the MCP endpoint (/mcp) in one process; built by github.com/halitdincer/rahle
+          image: ghcr.io/halitdincer/rahle:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rahle-secret
+                  key: POSTGRES_PASSWORD
+            - name: RAHLE_SERVER_DSN
+              value: postgresql://rahle:$(POSTGRES_PASSWORD)@rahle-db:5432/postgres
+            - name: RAHLE_ACCESS_TEAM_DOMAIN
+              valueFrom:
+                secretKeyRef:
+                  name: rahle-secret
+                  key: ACCESS_TEAM_DOMAIN
+            - name: RAHLE_ACCESS_AUD
+              valueFrom:
+                secretKeyRef:
+                  name: rahle-secret
+                  key: ACCESS_AUD
+            - name: RAHLE_PUBLIC_HOST
+              value: rahle.halitdincer.com
+          # `/` is the web app's index page: it needs no token and no database
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 768Mi
