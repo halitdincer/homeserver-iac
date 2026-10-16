@@ -21,13 +21,13 @@ spec:
         - name: postgres
           image: pgvector/pgvector:pg17
           args:
-            # small host (about 2.7 GiB free at the pilot, ADR 0005): keep Postgres modest
+            # the k3s VM is short of memory (4.8 GiB used of about 4.3 allocatable, swap in use): keep Postgres modest
             - -c
-            - shared_buffers=256MB
+            - shared_buffers=128MB
             - -c
-            - work_mem=16MB
+            - work_mem=8MB
             - -c
-            - max_connections=40
+            - max_connections=30
           ports:
             - name: postgres
               containerPort: 5432
@@ -51,11 +51,11 @@ spec:
             periodSeconds: 10
           resources:
             requests:
-              cpu: 100m
-              memory: 512Mi
+              cpu: 50m
+              memory: 256Mi
             limits:
               cpu: "1"
-              memory: 1536Mi
+              memory: 1Gi
   volumeClaimTemplates:
     - metadata:
         name: data

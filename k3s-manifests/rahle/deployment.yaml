@@ -16,6 +16,8 @@ spec:
       labels:
         app: rahle
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull # the rahle repo and its package are private
       containers:
         - name: rahle
           # the web app, the HTTP API and the MCP endpoint (/mcp) in one process; built by github.com/halitdincer/rahle
@@ -60,8 +62,8 @@ spec:
             failureThreshold: 3
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 50m
+              memory: 128Mi
             limits:
               cpu: "1"
-              memory: 768Mi
+              memory: 512Mi

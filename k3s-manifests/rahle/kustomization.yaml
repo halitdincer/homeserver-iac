@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - external-secret.yaml
+  - ghcr-pull-external-secret.yaml
   - postgres.yaml
   - deployment.yaml
   - service.yaml
