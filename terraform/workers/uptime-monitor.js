@@ -6,7 +6,7 @@
  * on-box Gatus monitor also died and never paged anyone.
  *
  * Behaviour:
- *  - scheduled() runs on the cron trigger (every minute) and checks each endpoint
+ *  - scheduled() runs on the cron trigger (every 30 minutes) and checks each endpoint
  *    through the Cloudflare tunnel.
  *  - "down" = HTTP 5xx (502/504/520-527/530 are Cloudflare origin/tunnel errors)
  *    or a fetch error/timeout. Anything <500 (200/301/302/401/403) = "up".
@@ -32,7 +32,7 @@ const ENDPOINTS = [
   { name: "Coder", url: "https://code.halitdincer.com/" },
 ];
 
-const FAIL_THRESHOLD = 2; // consecutive fails before paging (~2 min at 1/min)
+const FAIL_THRESHOLD = 2; // consecutive fails before paging (~30-60 min at 1 per 30 min)
 const TIMEOUT_MS = 15000;
 
 async function checkOne(ep) {

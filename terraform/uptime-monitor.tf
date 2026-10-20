@@ -52,13 +52,16 @@ resource "cloudflare_workers_script" "uptime_monitor" {
   ]
 }
 
-# Cron trigger — run every minute. With FAIL_THRESHOLD=2 in the worker, a real
-# outage pages after ~2 minutes (rides out single transient blips).
+# Cron trigger — run every 30 minutes. The worker does one KV put per endpoint
+# per run, and the free plan caps KV at 1,000 puts/day: every minute (6 × 1440 =
+# 8,640/day) blew the cap ~3h into each UTC day, after which state writes failed.
+# Every 30 min = 6 × 48 = 288/day. With FAIL_THRESHOLD=2, a real outage pages
+# after ~30-60 minutes.
 resource "cloudflare_workers_cron_trigger" "uptime_monitor" {
   account_id  = local.cf_account_id
   script_name = cloudflare_workers_script.uptime_monitor.script_name
   schedules = [{
-    cron = "* * * * *"
+    cron = "*/30 * * * *"
   }]
 }
 
