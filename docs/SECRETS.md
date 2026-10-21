@@ -14,6 +14,7 @@ Never use `kubectl create secret` or SealedSecrets for app secrets (SealedSecret
 | job-scout | `secret/job-scout/config` | `job-scout-secret` | job-scout |
 | iris | `secret/iris/config` (keys: `JWT_SIGNING_KEY`, `NTFY_BASE_URL`, `NTFY_TOPIC`, `NTFY_TOKEN`) | `iris-secret` | iris |
 | rahle | `secret/rahle/config` (keys: `POSTGRES_PASSWORD`, `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`) | `rahle-secret` | rahle |
+| bugsink | `secret/bugsink/config` (keys: `SECRET_KEY`, `CREATE_SUPERUSER` as `email:password`, read only on first start) | `bugsink-secret` | bugsink |
 | coder | `secret/coder/config` | `coder-secret` | coder |
 | coder (homeserver-iac workspace) | `secret/coder/homeserver-iac` | `homeserver-iac-secret` | coder |
 | coder (home-assistant workspace) | `secret/coder/home-assistant` | `home-assistant-secret` | coder |

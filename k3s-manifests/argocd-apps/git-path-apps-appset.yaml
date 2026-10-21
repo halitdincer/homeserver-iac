@@ -31,6 +31,9 @@ spec:
           - name: actual-budget
             path: k3s-manifests/actual-budget
             namespace: actual-budget
+          - name: bugsink
+            path: k3s-manifests/bugsink
+            namespace: bugsink
           - name: atlantis
             path: k3s-manifests/apps/atlantis
             namespace: atlantis

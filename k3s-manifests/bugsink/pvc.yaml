@@ -1,0 +1,12 @@
+# SQLite database (WAL mode) and stored events. local-path is a local disk, which WAL needs.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bugsink-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi

@@ -1,0 +1,88 @@
+# Bugsink - self-hosted error tracking, Sentry-SDK compatible.
+# One container runs the web app (gunicorn) and its background worker (snappea) on SQLite.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bugsink
+  labels:
+    app: bugsink
+  annotations:
+    reloader.stakater.com/auto: "true"
+spec:
+  replicas: 1
+  strategy:
+    # SQLite on a ReadWriteOnce volume: never two pods at once.
+    type: Recreate
+  selector:
+    matchLabels:
+      app: bugsink
+  template:
+    metadata:
+      labels:
+        app: bugsink
+    spec:
+      securityContext:
+        # the image runs as bugsink (14237); let it write the volume
+        fsGroup: 14237
+      containers:
+        - name: bugsink
+          image: bugsink/bugsink:2.6.1
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: bugsink-secret
+          env:
+            - name: BASE_URL
+              value: https://bugsink.halitdincer.com
+            - name: BEHIND_HTTPS_PROXY
+              value: "true"
+            - name: USER_REGISTRATION
+              value: CB_NOBODY
+            - name: PHONEHOME
+              value: "false"
+            - name: TIME_ZONE
+              value: America/Toronto
+            # the k3s VM is short on memory: 2 web workers (default: one per CPU, up to 4) and 1 background worker
+            - name: GUNICORN_CMD_ARGS
+              value: --workers=2
+            - name: SNAPPEA_NUM_WORKERS
+              value: "1"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+              # ALLOWED_HOSTS is the BASE_URL host plus localhost, not the pod IP a probe sends
+              httpHeaders:
+                - name: Host
+                  value: localhost
+                - name: X-Forwarded-Proto
+                  value: https
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+              # ALLOWED_HOSTS is the BASE_URL host plus localhost, not the pod IP a probe sends
+              httpHeaders:
+                - name: Host
+                  value: localhost
+                - name: X-Forwarded-Proto
+                  value: https
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 50m
+              memory: 192Mi
+            limits:
+              memory: 512Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: bugsink-data
