@@ -24,7 +24,9 @@ resource "proxmox_virtual_environment_vm" "immich" {
   memory {
     dedicated = 4096 # 4GB ceiling (live usage ~3.5GB). 12GB was incoherent on a
     # 15GB host: immich+k3s+haos alone already sum to 20GB. Reverted 2026-08-02.
-    floating = 2048 # balloon down to 2GB when idle so the host can reclaim RAM
+    # balloon down to 1GB under host pressure (was 2GB): the running VMs' ceilings sum to the host's 16GB, and k3s
+    # (derlem's 7.6GB corpus index wants page cache) is the one that should keep its memory
+    floating = 1024
   }
 
   bios          = "ovmf"
@@ -90,6 +92,7 @@ resource "proxmox_virtual_environment_vm" "home_assistant" {
 
   memory {
     dedicated = 4096 # 4GB
+    floating  = 2048 # balloon down to 2GB under host pressure (matches the live VM since 2026-06-09)
   }
 
   bios          = "ovmf"
@@ -219,6 +222,7 @@ resource "proxmox_virtual_environment_vm" "devbox" {
 
   memory {
     dedicated = 4096 # 4GB
+    floating  = 2048 # balloon down to 2GB under host pressure (matches the live VM since 2026-06-09)
   }
 
   bios          = "ovmf"
