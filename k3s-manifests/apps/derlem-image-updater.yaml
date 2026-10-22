@@ -62,7 +62,8 @@ spec:
     template:
       type: kubernetes.io/dockerconfigjson
       data:
-        .dockerconfigjson: '{"auths":{"ghcr.io":{"username":"halitdincer","password":"{{ .token }}"}}}'
+        # the image updater (unlike the kubelet) needs `auth`: base64 of user:token
+        .dockerconfigjson: '{"auths":{"ghcr.io":{"username":"halitdincer","password":"{{ .token }}","auth":"{{ printf "halitdincer:%s" .token | b64enc }}"}}}'
   data:
     - secretKey: token
       remoteRef:
