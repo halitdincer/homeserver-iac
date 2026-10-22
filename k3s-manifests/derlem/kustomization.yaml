@@ -15,20 +15,20 @@ images:
   - name: ghcr.io/halitdincer/derlem-users
     newName: ghcr.io/halitdincer/derlem-users
     newTag: latest
-    digest: sha256:e9a0ba2fb034d566ea111fccd96ba1e7296aac6fc3203148808802f5bd1d1cd3
+    digest: sha256:f20b16ccc171a404490502ddcf90925fd0521d67eaf2d456256fe40debac61f6
   - name: ghcr.io/halitdincer/derlem-corpus
     newName: ghcr.io/halitdincer/derlem-corpus
     newTag: latest
-    digest: sha256:8cc6622ddb14a463e26d4cc5550adb91c47b22b341c51bf9b7d477858b5fc968
+    digest: sha256:d3e69ff8d5f034eac9dc71a27237ddc94077fedb31091f75dd632cdaf08edb9d
   - name: ghcr.io/halitdincer/derlem-media
     newName: ghcr.io/halitdincer/derlem-media
     newTag: latest
-    digest: sha256:a1ab9c15c6f0fb1a2aafe4f6b85935ec476a03a7649e0acbf12ff478a5f63ded
+    digest: sha256:dedc81a14531c08f52a874221438cf714d1ebf29a02a49fb1f98ce8abe9987c3
   - name: ghcr.io/halitdincer/derlem-backend
     newName: ghcr.io/halitdincer/derlem-backend
     newTag: latest
-    digest: sha256:b3a1bfbbe412cebf18a97e6634574419858846cedc4444fc584459a6ec3379b4
+    digest: sha256:6f0b3eed39660a3556ae6d2e2865ba20939d92fb89d8fa2b85f1ca74ec663698
   - name: ghcr.io/halitdincer/derlem-mcp
     newName: ghcr.io/halitdincer/derlem-mcp
     newTag: latest
-    digest: sha256:c10ee5da7cdc898d31b4e5424fa2624af63bd89ae582c4a44ed1e0c1738861c6
+    digest: sha256:3bf4bfbb8e441be3c98996de4c3ebdd538fb79f6837ce5b0189b4a02a4d188fb
