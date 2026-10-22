@@ -1,0 +1,74 @@
+# The MCP server, at https://mentorbridge.org/mcp behind the same Access application
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp
+  labels:
+    app: mcp
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: mcp
+  template:
+    metadata:
+      labels:
+        app: mcp
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull # the derlem repo and its packages are private
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: mcp
+          image: ghcr.io/halitdincer/derlem-mcp:latest
+          ports:
+            - name: http
+              containerPort: 8400
+          env:
+            - name: SENTRY_ENVIRONMENT
+              value: production
+            - name: DERLEM_CORPUS_URL
+              value: http://corpus:8200
+            - name: DERLEM_APP_URL
+              value: http://backend:8300
+            - name: DERLEM_PUBLIC_HOST
+              value: mentorbridge.org
+            - name: DERLEM_ACCESS_TEAM_DOMAIN
+              valueFrom: { secretKeyRef: { name: derlem-secret, key: ACCESS_TEAM_DOMAIN } }
+            - name: DERLEM_ACCESS_AUDIENCES
+              valueFrom: { secretKeyRef: { name: derlem-secret, key: ACCESS_AUD } }
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 2
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp
+  labels:
+    app: mcp
+spec:
+  selector:
+    app: mcp
+  ports:
+    - name: http
+      port: 8400
+      targetPort: http

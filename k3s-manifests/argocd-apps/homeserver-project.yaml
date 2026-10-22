@@ -64,7 +64,7 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: iris-mcp
     - server: https://kubernetes.default.svc
-      namespace: rahle
+      namespace: derlem
     - server: https://kubernetes.default.svc
       namespace: job-scout
     # job-scout preview AppSet creates per-PR namespaces.

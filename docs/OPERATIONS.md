@@ -16,7 +16,7 @@
 | `bugsink` | `k3s-manifests/bugsink/` | Bugsink error tracking at `bugsink.halitdincer.com` (kustomize). `bugsink/bugsink`, web + background worker in one container, SQLite on a PVC. Sentry-SDK compatible: apps send errors to a project's DSN. Ingress is public (browsers report there); the UI has its own login, registration off. Secret from Vault `secret/bugsink/config`. |
 | `job-scout` | `k3s-manifests/job-scout/` | job-scout (kustomize) |
 | `iris` | `k3s-manifests/iris/` | Personal capability API at `iris.halitdincer.com` (kustomize). FastAPI + OpenAPI surface for LLMs. Three-tier auth (public / JWT / step-up via ntfy). |
-| `rahle` | `k3s-manifests/rahle/` | rahle at `rahle.halitdincer.com` (kustomize): the web app, HTTP API and MCP (`/mcp`) in one `ghcr.io/halitdincer/rahle` pod, plus a pgvector Postgres StatefulSet. Behind a Cloudflare Access application; the library is loaded from the laptop with `rahle-library restore` (see the rahle repo's `docs/deploy.md`). |
+| `derlem` | `k3s-manifests/derlem/` | derlem, the library platform that replaced rahle, at `mentorbridge.org` for now (kustomize): `users`, `corpus`, `media`, `backend` (the web app and `/api`) and `mcp` (`/mcp`), one `ghcr.io/halitdincer/derlem-*` image each, plus a Postgres StatefulSet (databases `users` and `app`; the services migrate them on start). Behind the Cloudflare Access application `derlem`. Deploys by the image updater (`apps/derlem-image-updater.yaml`) committing new `:latest` digests. The corpus is not in an image: see "derlem corpus data" below. |
 | `vault` | Helm: hashicorp/vault@0.29.1 | Vault (standalone Raft) |
 | `external-secrets` | Helm: external-secrets@0.14.0 | ESO |
 
@@ -161,3 +161,17 @@ UI moved off-cluster.
 External (non-K8s) targets like the Proxmox host live in the `prometheus.scrape`
 block of `alloy`'s River config (`k3s-manifests/argocd-apps/helm-charts-appset.yaml`,
 the `alloy` entry).
+
+## derlem corpus data
+
+`corpus` and `media` read the Release Index files and the Media Store from the K3s node itself (hostPath, read-only):
+`/srv/derlem/releases/<name>.sqlite` and `/srv/derlem/media/`. They are built in the derlem repo (`releases/`, `media/`
+there) and copied over by hand, readable by `nobody`, then the pods restarted:
+
+```bash
+rsync -a --chmod=a+rX releases/ root@100.112.34.54:/srv/derlem/releases/
+rsync -a --chmod=a+rX media/ root@100.112.34.54:/srv/derlem/media/
+ssh root@100.112.34.54 kubectl rollout restart -n derlem deploy/corpus deploy/media
+```
+
+A pod stays in ContainerCreating until its directory exists.
