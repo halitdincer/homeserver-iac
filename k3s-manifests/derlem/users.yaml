@@ -28,6 +28,8 @@ spec:
           env:
             - name: SENTRY_ENVIRONMENT
               value: production
+            - name: SENTRY_DSN # Bugsink project derlem-services; each event is tagged with its service
+              valueFrom: { secretKeyRef: { name: derlem-secret, key: SENTRY_DSN } }
             - name: POSTGRES_PASSWORD
               valueFrom: { secretKeyRef: { name: derlem-secret, key: POSTGRES_PASSWORD } }
             - name: DERLEM_USERS_DATABASE_URL

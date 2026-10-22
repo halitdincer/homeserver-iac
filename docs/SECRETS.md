@@ -13,7 +13,7 @@ Never use `kubectl create secret` or SealedSecrets for app secrets (SealedSecret
 | atlantis | `secret/atlantis/config` (also holds `TF_VAR_*` keys for terraform vars, including `TF_VAR_grafana_auth_token`) | `atlantis-env` | atlantis |
 | job-scout | `secret/job-scout/config` | `job-scout-secret` | job-scout |
 | iris | `secret/iris/config` (keys: `JWT_SIGNING_KEY`, `NTFY_BASE_URL`, `NTFY_TOPIC`, `NTFY_TOKEN`) | `iris-secret` | iris |
-| derlem | `secret/derlem/config` (keys: `POSTGRES_PASSWORD`, `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`); `secret/derlem/ghcr` (key: `token`, read:packages, for the pods and the image updater) | `derlem-secret`, `ghcr-pull`; `derlem-ghcr` | derlem; argocd |
+| derlem | `secret/derlem/config` (keys: `POSTGRES_PASSWORD`, `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`, `SENTRY_DSN`); `secret/derlem/ghcr` (key: `token`, read:packages, for the pods and the image updater) | `derlem-secret`, `ghcr-pull`; `derlem-ghcr` | derlem; argocd |
 | bugsink | `secret/bugsink/config` (keys: `SECRET_KEY`, `CREATE_SUPERUSER` as `email:password`, read only on first start) | `bugsink-secret` | bugsink |
 | coder | `secret/coder/config` | `coder-secret` | coder |
 | coder (homeserver-iac workspace) | `secret/coder/homeserver-iac` | `homeserver-iac-secret` | coder |

@@ -27,7 +27,7 @@
 | Wildcard route | `*.halitdincer.com` -> `http://10.10.10.105` (K3s nginx ingress) |
 | DNS | CNAME `*` -> `<tunnel-id>.cfargotunnel.com` (proxied) |
 | Apex | CNAME `@` -> `<tunnel-id>.cfargotunnel.com` (proxied) (Matrix delegation no longer served; apex is kept for the tunnel). Cloudflare CNAME-flattens at the apex. |
-| Other domain | `mentorbridge.org` (derlem, temporary): its own Cloudflare zone (NS `arvind` + `aurora`, not in Terraform), CNAME `@` -> the tunnel (proxied), a public hostname on the tunnel -> `http://10.10.10.105`, and the Access application `derlem` (one allowed email) |
+| Other domain | `mentorbridge.org` (derlem, temporary): its own Cloudflare zone (NS `arvind` + `aurora`, not in Terraform), CNAME `@` -> the tunnel (proxied), a public hostname on the tunnel -> `http://10.10.10.105`, and the Access application `derlem` (one allowed email). `bugsink.mentorbridge.org` (Bugsink, public: browsers report there) is a second public hostname and CNAME on the same tunnel |
 
 ## Private Access -- Tailscale
 

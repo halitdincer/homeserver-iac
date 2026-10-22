@@ -1,5 +1,5 @@
 # Bugsink - error tracking
-# Domain: bugsink.halitdincer.com
+# Domain: bugsink.mentorbridge.org
 # Public on purpose: browsers send errors here (guarded by each project's DSN key); the UI has its own login.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -13,7 +13,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: bugsink.halitdincer.com
+    - host: bugsink.mentorbridge.org
       http:
         paths:
           - path: /

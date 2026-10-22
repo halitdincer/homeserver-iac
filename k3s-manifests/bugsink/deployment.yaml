@@ -35,7 +35,7 @@ spec:
                 name: bugsink-secret
           env:
             - name: BASE_URL
-              value: https://bugsink.halitdincer.com
+              value: https://bugsink.mentorbridge.org
             - name: BEHIND_HTTPS_PROXY
               value: "true"
             - name: USER_REGISTRATION
