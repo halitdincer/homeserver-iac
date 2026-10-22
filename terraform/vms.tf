@@ -92,6 +92,7 @@ resource "proxmox_virtual_environment_vm" "home_assistant" {
 
   memory {
     dedicated = 4096 # 4GB
+    floating  = 2048 # balloon down to 2GB under host pressure (matches the live VM since 2026-06-09)
   }
 
   bios          = "ovmf"
@@ -221,6 +222,7 @@ resource "proxmox_virtual_environment_vm" "devbox" {
 
   memory {
     dedicated = 4096 # 4GB
+    floating  = 2048 # balloon down to 2GB under host pressure (matches the live VM since 2026-06-09)
   }
 
   bios          = "ovmf"
