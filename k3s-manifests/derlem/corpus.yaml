@@ -8,6 +8,10 @@ metadata:
 spec:
   replicas: 1
   revisionHistoryLimit: 3
+  strategy:
+    # the node's memory requests are nearly all given out: a second corpus pod (384Mi) would not fit beside the
+    # first, so a deploy stops the old one before starting the new (a few seconds without search)
+    rollingUpdate: { maxSurge: 0, maxUnavailable: 1 }
   selector:
     matchLabels:
       app: corpus
@@ -57,8 +61,10 @@ spec:
             failureThreshold: 3
           resources:
             requests:
-              cpu: 25m
-              memory: 128Mi
+              cpu: 100m
+              # above its ~285Mi working set, so under node memory pressure the kubelet evicts pods using more than
+              # they asked for before this one
+              memory: 384Mi
             limits:
               cpu: "1"
               memory: 768Mi
