@@ -1,6 +1,5 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-
 resources:
   - external-secret.yaml
   - ghcr-pull-external-secret.yaml
@@ -10,12 +9,26 @@ resources:
   - media.yaml
   - backend.yaml
   - mcp.yaml
-
 # built by github.com/halitdincer/derlem CI on every push to main; the image updater (apps/derlem-image-updater.yaml)
 # writes each :latest digest here, so a deploy is a commit
 images:
   - name: ghcr.io/halitdincer/derlem-users
+    newName: ghcr.io/halitdincer/derlem-users
+    newTag: latest
+    digest: sha256:dc04468b91bd85aefb4843baabad79699ff9be6e14ca5a03a9df034d63148e7d
   - name: ghcr.io/halitdincer/derlem-corpus
+    newName: ghcr.io/halitdincer/derlem-corpus
+    newTag: latest
+    digest: sha256:6cb4f716c2b28fdf0d955dfaaf31ef31b41b4b82a58bb5dcc42f731091def15a
   - name: ghcr.io/halitdincer/derlem-media
+    newName: ghcr.io/halitdincer/derlem-media
+    newTag: latest
+    digest: sha256:b849c58951e4d224d3c3ff7292a24cefb88bd5100d7e6e264854e136fa19cb0c
   - name: ghcr.io/halitdincer/derlem-backend
+    newName: ghcr.io/halitdincer/derlem-backend
+    newTag: latest
+    digest: sha256:0fe2992547db96536d3df2f9852cbaa0e801fcf9b8587a72c75facd2e08da20f
   - name: ghcr.io/halitdincer/derlem-mcp
+    newName: ghcr.io/halitdincer/derlem-mcp
+    newTag: latest
+    digest: sha256:bb9f6a6aca2fe2ad13a305d1392a6c1daf23e16f6c374faadde6abc7053bd680
