@@ -77,26 +77,6 @@ variable "cloudflare_api_token" {
   sensitive   = true
 }
 
-# Namecheap — TEMPORARY: kept only so the `removed` block in dns.tf can forget the
-# registrar resource from state. Delete these + the provider block in the follow-up.
-variable "namecheap_user_name" {
-  description = "Namecheap account username"
-  type        = string
-  sensitive   = true
-}
-
-variable "namecheap_api_user" {
-  description = "Namecheap API username"
-  type        = string
-  sensitive   = true
-}
-
-variable "namecheap_api_key" {
-  description = "Namecheap API key"
-  type        = string
-  sensitive   = true
-}
-
 # Grafana Cloud
 variable "grafana_url" {
   description = "Grafana Cloud stack URL (e.g. https://halitdincer.grafana.net)"

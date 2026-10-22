@@ -3,19 +3,11 @@
 #   daphne.ns.cloudflare.com
 #   kellen.ns.cloudflare.com
 #
-# Removed from Terraform 2026-08-03: the Namecheap provider's API is IP-whitelist
-# -gated on a dynamic home IP (Atlantis egress). Refreshing this single
-# set-and-forget resource on every plan froze the ENTIRE pipeline whenever the
-# ISP rotated the IP. When registering a new domain, point its NS to Cloudflare
-# by hand once. The block below forgets the resource from state WITHOUT resetting
-# the live NS records; delete it (and the namecheap required_providers entry)
-# in a follow-up once this has applied.
-removed {
-  from = namecheap_domain_records.halitdincer
-  lifecycle {
-    destroy = false # forget from state only — do NOT touch the real NS records
-  }
-}
+# Namecheap was removed from Terraform 2026-08-03: its provider API is
+# IP-whitelist-gated on the dynamic home IP (Atlantis egress), so refreshing this
+# single set-and-forget resource on every plan froze the ENTIRE pipeline whenever
+# the ISP rotated the IP. When registering a new domain, point its NS to
+# Cloudflare by hand once — it never changes after that.
 
 # DNS records for halitdincer.com managed via Cloudflare API.
 #
