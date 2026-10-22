@@ -1,18 +1,20 @@
-# ArgoCD Application for rahle
+# ArgoCD Application for derlem (the library platform replacing rahle; github.com/halitdincer/derlem)
+# Managed by ArgoCD Image Updater (apps/derlem-image-updater.yaml): deploys when a ghcr.io/halitdincer/derlem-*:latest
+# digest changes, by committing the digest to k3s-manifests/derlem/kustomization.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: rahle
+  name: derlem
   namespace: argocd
 spec:
   project: homeserver
   source:
     repoURL: git@github.com:halitdincer/homeserver-iac.git
     targetRevision: main
-    path: k3s-manifests/rahle
+    path: k3s-manifests/derlem
   destination:
     server: https://kubernetes.default.svc
-    namespace: rahle
+    namespace: derlem
   syncPolicy:
     automated:
       prune: true

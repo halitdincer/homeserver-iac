@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - external-secret.yaml
+  - ghcr-pull-external-secret.yaml
+  - postgres.yaml
+  - users.yaml
+  - corpus.yaml
+  - media.yaml
+  - backend.yaml
+  - mcp.yaml
+
+# built by github.com/halitdincer/derlem CI on every push to main; the image updater (apps/derlem-image-updater.yaml)
+# writes each :latest digest here, so a deploy is a commit
+images:
+  - name: ghcr.io/halitdincer/derlem-users
+  - name: ghcr.io/halitdincer/derlem-corpus
+  - name: ghcr.io/halitdincer/derlem-media
+  - name: ghcr.io/halitdincer/derlem-backend
+  - name: ghcr.io/halitdincer/derlem-mcp

@@ -1,61 +1,76 @@
-# pgvector Postgres for rahle: the `postgres` database holds the live-library pointer, `readers` holds notes, highlights and
-# positions (never swapped), and each restored snapshot becomes a `library_<version>` database (ADR 0007).
+# Postgres for derlem: one database per service that keeps state (`users`, `app`); each service migrates its own on start.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: derlem-db-init
+data:
+  init.sql: |
+    create database users;
+    create database app;
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: rahle-db
+  name: derlem-db
   labels:
-    app: rahle-db
+    app: derlem-db
 spec:
-  serviceName: rahle-db
+  serviceName: derlem-db
   replicas: 1
   selector:
     matchLabels:
-      app: rahle-db
+      app: derlem-db
   template:
     metadata:
       labels:
-        app: rahle-db
+        app: derlem-db
     spec:
       containers:
         - name: postgres
-          image: pgvector/pgvector:pg17
+          image: postgres:17-alpine
           args:
-            # the k3s VM is short of memory (4.8 GiB used of about 4.3 allocatable, swap in use): keep Postgres modest
+            # the k3s VM is short of memory: keep Postgres modest (the data is people's Collections and Highlights, small)
             - -c
-            - shared_buffers=128MB
+            - shared_buffers=64MB
             - -c
-            - work_mem=8MB
+            - work_mem=4MB
             - -c
-            - max_connections=30
+            - max_connections=50
           ports:
             - name: postgres
               containerPort: 5432
           env:
             - name: POSTGRES_USER
-              value: rahle
+              value: derlem
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: rahle-secret
+                  name: derlem-secret
                   key: POSTGRES_PASSWORD
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "rahle"]
+              command: ["pg_isready", "-U", "derlem"]
             initialDelaySeconds: 5
             periodSeconds: 10
           resources:
             requests:
-              cpu: 50m
-              memory: 256Mi
+              cpu: 25m
+              memory: 96Mi
             limits:
               cpu: "1"
-              memory: 1Gi
+              memory: 512Mi
+      volumes:
+        - name: init
+          configMap:
+            name: derlem-db-init
   volumeClaimTemplates:
     - metadata:
         name: data
@@ -64,15 +79,15 @@ spec:
         storageClassName: local-path
         resources:
           requests:
-            storage: 12Gi # the library database is about 2 GiB; a restore briefly holds two copies
+            storage: 2Gi
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: rahle-db
+  name: derlem-db
 spec:
   selector:
-    app: rahle-db
+    app: derlem-db
   ports:
     - name: postgres
       port: 5432

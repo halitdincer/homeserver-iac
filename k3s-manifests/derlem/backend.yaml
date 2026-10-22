@@ -1,0 +1,78 @@
+# The app backend: the web app's API (/api) and the built web app itself (database `app`)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull # the derlem repo and its packages are private
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: backend
+          image: ghcr.io/halitdincer/derlem-backend:latest
+          ports:
+            - name: http
+              containerPort: 8300
+          env:
+            - name: SENTRY_ENVIRONMENT
+              value: production
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: derlem-secret, key: POSTGRES_PASSWORD } }
+            - name: DERLEM_APP_DATABASE_URL
+              value: postgresql://derlem:$(POSTGRES_PASSWORD)@derlem-db:5432/app
+            - name: DERLEM_USERS_URL
+              value: http://users:8100
+            - name: DERLEM_CORPUS_URL
+              value: http://corpus:8200
+            - name: DERLEM_MEDIA_URL
+              value: http://media:8500
+            - name: DERLEM_ACCESS_TEAM_DOMAIN
+              valueFrom: { secretKeyRef: { name: derlem-secret, key: ACCESS_TEAM_DOMAIN } }
+            - name: DERLEM_ACCESS_AUDIENCES
+              valueFrom: { secretKeyRef: { name: derlem-secret, key: ACCESS_AUD } }
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 2
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /ready, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 96Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  selector:
+    app: backend
+  ports:
+    - name: http
+      port: 8300
+      targetPort: http

@@ -1,0 +1,82 @@
+# The corpus API (DTS) and search, over the Release Index files on the node
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: corpus
+  labels:
+    app: corpus
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: corpus
+  template:
+    metadata:
+      labels:
+        app: corpus
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull # the derlem repo and its packages are private
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: corpus
+          image: ghcr.io/halitdincer/derlem-corpus:latest
+          ports:
+            - name: http
+              containerPort: 8200
+          env:
+            - name: SENTRY_ENVIRONMENT
+              value: production
+            - name: DERLEM_CORPUS_RELEASES
+              value: /data/releases
+            - name: DERLEM_USERS_URL
+              value: http://users:8100
+            - name: DERLEM_ACCESS_TEAM_DOMAIN
+              valueFrom: { secretKeyRef: { name: derlem-secret, key: ACCESS_TEAM_DOMAIN } }
+            - name: DERLEM_ACCESS_AUDIENCES
+              valueFrom: { secretKeyRef: { name: derlem-secret, key: ACCESS_AUD } }
+          volumeMounts:
+            - name: data
+              mountPath: /data/releases
+              readOnly: true
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 2
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 768Mi
+      volumes:
+        - name: data
+          # loaded onto the node by hand (docs/OPERATIONS.md, derlem): the Release Index files
+          hostPath:
+            path: /srv/derlem/releases
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: corpus
+  labels:
+    app: corpus
+spec:
+  selector:
+    app: corpus
+  ports:
+    - name: http
+      port: 8200
+      targetPort: http

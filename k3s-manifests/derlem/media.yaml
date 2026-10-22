@@ -1,0 +1,82 @@
+# The media service: covers and figures, from the Media Store on the node
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: media
+  labels:
+    app: media
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: media
+  template:
+    metadata:
+      labels:
+        app: media
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull # the derlem repo and its packages are private
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: media
+          image: ghcr.io/halitdincer/derlem-media:latest
+          ports:
+            - name: http
+              containerPort: 8500
+          env:
+            - name: SENTRY_ENVIRONMENT
+              value: production
+            - name: DERLEM_MEDIA_STORE
+              value: /data/media
+            - name: DERLEM_USERS_URL
+              value: http://users:8100
+            - name: DERLEM_ACCESS_TEAM_DOMAIN
+              valueFrom: { secretKeyRef: { name: derlem-secret, key: ACCESS_TEAM_DOMAIN } }
+            - name: DERLEM_ACCESS_AUDIENCES
+              valueFrom: { secretKeyRef: { name: derlem-secret, key: ACCESS_AUD } }
+          volumeMounts:
+            - name: data
+              mountPath: /data/media
+              readOnly: true
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 2
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 256Mi
+      volumes:
+        - name: data
+          # loaded onto the node by hand (docs/OPERATIONS.md, derlem): the Media Store
+          hostPath:
+            path: /srv/derlem/media
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: media
+  labels:
+    app: media
+spec:
+  selector:
+    app: media
+  ports:
+    - name: http
+      port: 8500
+      targetPort: http
