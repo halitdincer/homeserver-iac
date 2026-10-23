@@ -1,4 +1,4 @@
-# derlem - the library platform (web app, its API, and the MCP server at /mcp), replacing rahle
+# derlem - the library platform: the web app, its API at /api and the MCP server at /mcp, replacing rahle
 # Domain: mentorbridge.org (temporary), behind the Cloudflare Access application "derlem"; the tunnel routes the
 # hostname to nginx (a public hostname on the remotely managed tunnel, as it is not under *.halitdincer.com)
 apiVersion: networking.k8s.io/v1
@@ -23,10 +23,17 @@ spec:
                 name: mcp
                 port:
                   number: 8400
-          - path: /
+          - path: /api
             pathType: Prefix
             backend:
               service:
                 name: backend
                 port:
                   number: 8300
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  number: 8080

@@ -1,6 +1,5 @@
 # ArgoCD Application for derlem (the library platform replacing rahle; github.com/halitdincer/derlem)
-# Managed by ArgoCD Image Updater (apps/derlem-image-updater.yaml): deploys when a ghcr.io/halitdincer/derlem-*:latest
-# digest changes, by committing the digest to k3s-manifests/derlem/kustomization.yaml
+# Deploys when the derlem repo's deploy workflow commits released versions to k3s-manifests/derlem/kustomization.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

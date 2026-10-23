@@ -21,7 +21,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: mcp
-          image: ghcr.io/halitdincer/derlem-mcp:latest
+          image: ghcr.io/halitdincer/derlem-mcp
           ports:
             - name: http
               containerPort: 8400

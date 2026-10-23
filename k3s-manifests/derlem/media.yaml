@@ -21,7 +21,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: media
-          image: ghcr.io/halitdincer/derlem-media:latest
+          image: ghcr.io/halitdincer/derlem-media
           ports:
             - name: http
               containerPort: 8500
