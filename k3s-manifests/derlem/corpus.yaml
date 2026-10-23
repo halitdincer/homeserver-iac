@@ -25,7 +25,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: corpus
-          image: ghcr.io/halitdincer/derlem-corpus:latest
+          image: ghcr.io/halitdincer/derlem-corpus
           ports:
             - name: http
               containerPort: 8200

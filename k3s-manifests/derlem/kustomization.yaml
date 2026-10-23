@@ -9,26 +9,19 @@ resources:
   - media.yaml
   - backend.yaml
   - mcp.yaml
-# built by github.com/halitdincer/derlem CI on every push to main; the image updater (apps/derlem-image-updater.yaml)
-# writes each :latest digest here, so a deploy is a commit
+  - web.yaml
+# The version of each image running: released versions only, pinned by the derlem repo's deploy workflow (`just deploy`
+# there), which commits here; ArgoCD rolls them out
 images:
   - name: ghcr.io/halitdincer/derlem-users
-    newName: ghcr.io/halitdincer/derlem-users
-    newTag: latest
-    digest: sha256:a2549a8fa0d89bf0d1e9752b4d73a5cab30fbcdc3f3b749496dc2f418181f423
+    newTag: "1.0.0"
   - name: ghcr.io/halitdincer/derlem-corpus
-    newName: ghcr.io/halitdincer/derlem-corpus
-    newTag: latest
-    digest: sha256:43feb233de3e13d01badd34d9064611d5b36a26eef0588b5b1c32759ab8990e3
+    newTag: "1.0.0"
   - name: ghcr.io/halitdincer/derlem-media
-    newName: ghcr.io/halitdincer/derlem-media
-    newTag: latest
-    digest: sha256:c3b8a310b2238256e6c814ae26320b7ea64eb3479cc415459ca1fccf6439628f
+    newTag: "1.0.0"
   - name: ghcr.io/halitdincer/derlem-backend
-    newName: ghcr.io/halitdincer/derlem-backend
-    newTag: latest
-    digest: sha256:222c0df7168257c24f9b686615c1a461a8d80683d3bd72a95c47f94f7c0aac1b
+    newTag: "1.0.0"
   - name: ghcr.io/halitdincer/derlem-mcp
-    newName: ghcr.io/halitdincer/derlem-mcp
-    newTag: latest
-    digest: sha256:570ec7bf416b1a4472e34a1ed87373ac02ce68fbecbc63d8800320e8fdc6e8b4
+    newTag: "1.0.0"
+  - name: ghcr.io/halitdincer/derlem-web
+    newTag: "1.0.0"

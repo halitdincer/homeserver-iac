@@ -1,4 +1,4 @@
-# The app backend: the web app's API (/api) and the built web app itself (database `app`)
+# The app backend: the web app's API (/api; database `app`)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -21,7 +21,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: backend
-          image: ghcr.io/halitdincer/derlem-backend:latest
+          image: ghcr.io/halitdincer/derlem-backend
           ports:
             - name: http
               containerPort: 8300
