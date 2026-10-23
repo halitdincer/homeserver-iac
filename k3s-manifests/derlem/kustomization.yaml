@@ -14,14 +14,24 @@ resources:
 # there), which commits here; ArgoCD rolls them out
 images:
   - name: ghcr.io/halitdincer/derlem-users
-    newTag: "1.0.0"
+    newTag: latest
+    newName: ghcr.io/halitdincer/derlem-users
+    digest: sha256:a2549a8fa0d89bf0d1e9752b4d73a5cab30fbcdc3f3b749496dc2f418181f423
   - name: ghcr.io/halitdincer/derlem-corpus
-    newTag: "1.0.0"
+    newTag: latest
+    newName: ghcr.io/halitdincer/derlem-corpus
+    digest: sha256:43feb233de3e13d01badd34d9064611d5b36a26eef0588b5b1c32759ab8990e3
   - name: ghcr.io/halitdincer/derlem-media
-    newTag: "1.0.0"
+    newTag: latest
+    newName: ghcr.io/halitdincer/derlem-media
+    digest: sha256:c3b8a310b2238256e6c814ae26320b7ea64eb3479cc415459ca1fccf6439628f
   - name: ghcr.io/halitdincer/derlem-backend
-    newTag: "1.0.0"
+    newTag: latest
+    newName: ghcr.io/halitdincer/derlem-backend
+    digest: sha256:222c0df7168257c24f9b686615c1a461a8d80683d3bd72a95c47f94f7c0aac1b
   - name: ghcr.io/halitdincer/derlem-mcp
-    newTag: "1.0.0"
+    newTag: latest
+    newName: ghcr.io/halitdincer/derlem-mcp
+    digest: sha256:570ec7bf416b1a4472e34a1ed87373ac02ce68fbecbc63d8800320e8fdc6e8b4
   - name: ghcr.io/halitdincer/derlem-web
     newTag: "1.0.0"
