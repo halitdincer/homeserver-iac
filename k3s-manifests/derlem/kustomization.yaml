@@ -20,8 +20,8 @@ images:
   - name: ghcr.io/halitdincer/derlem-media
     newTag: "2.0.0"
   - name: ghcr.io/halitdincer/derlem-backend
-    newTag: "2.1.0"
+    newTag: "2.1.1"
   - name: ghcr.io/halitdincer/derlem-mcp
     newTag: "2.1.0"
   - name: ghcr.io/halitdincer/derlem-web
-    newTag: "2.1.0"
+    newTag: "2.2.0"
