@@ -16,12 +16,12 @@ images:
   - name: ghcr.io/halitdincer/derlem-users
     newTag: "1.0.0"
   - name: ghcr.io/halitdincer/derlem-corpus
-    newTag: "2.0.0"
+    newTag: "2.1.0"
   - name: ghcr.io/halitdincer/derlem-media
     newTag: "2.0.0"
   - name: ghcr.io/halitdincer/derlem-backend
-    newTag: "2.0.0"
+    newTag: "2.1.0"
   - name: ghcr.io/halitdincer/derlem-mcp
-    newTag: "2.0.0"
+    newTag: "2.1.0"
   - name: ghcr.io/halitdincer/derlem-web
-    newTag: "2.0.0"
+    newTag: "2.1.0"
