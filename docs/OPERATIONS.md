@@ -19,6 +19,7 @@
 | `derlem` | `k3s-manifests/derlem/` | derlem, the library platform that replaced rahle, at `mentorbridge.org` for now (kustomize): `users`, `corpus`, `media`, `web` (the web app, Caddy), `backend` (`/api`) and `mcp` (`/mcp`), one `ghcr.io/halitdincer/derlem-*` image each, plus a Postgres StatefulSet (databases `users` and `app`; the services migrate them on start). Behind the Cloudflare Access application `derlem`. Each image is pinned to a released version in `kustomization.yaml`; a deploy is the derlem repo's `deploy` workflow (`just deploy` there, GitHub environment `production`, with a read-write deploy key on this repo) committing new versions; a rollback is a deploy of an earlier one. The corpus is not in an image: see "derlem corpus data" below. |
 | `vault` | Helm: hashicorp/vault@0.29.1 | Vault (standalone Raft) |
 | `external-secrets` | Helm: external-secrets@0.14.0 | ESO |
+| `keda`, `keda-add-ons-http` | Helm: kedacore/keda@2.21.0, kedacore/keda-add-ons-http@0.16.0 (namespace `keda`) | Scale-to-zero for occasionally-used apps. See "Scale-to-zero apps" below. |
 
 ## Change Workflows
 
@@ -116,6 +117,55 @@ ArgoCD: argocd.halitdincer.com | Atlantis: atlantis.halitdincer.com | Gatus: sta
 4. Add wrapper resources (Ingress, ExternalSecret, ConfigMap, RBAC) under `templates/` — these stay verbatim across chart bumps
 5. Add a dedicated `Application` YAML in `k3s-manifests/argocd-apps/` with `path: k3s-manifests/apps/<app>` (ArgoCD auto-runs `helm dependency build`); `kubectl apply` once
 6. Push to `main`
+
+## Scale-to-zero apps (KEDA HTTP add-on)
+
+For apps that don't need to run constantly. The app sits at 0 replicas; the
+first request wakes it (the KEDA interceptor holds the request until the pod is
+Ready, up to 60 s), and it goes back to 0 after `scaledownPeriod` with no
+traffic. An open WebSocket counts as an in-flight request, so a live session
+keeps the app up.
+
+Opt an app in with three changes in its own namespace:
+
+1. **Drop `replicas:`** from the Deployment — KEDA owns it now, and a re-apply
+   with `replicas: 1` would fight it.
+2. **An `HTTPScaledObject`** naming the Deployment, its Service/port and host:
+
+   ```yaml
+   apiVersion: http.keda.sh/v1alpha1
+   kind: HTTPScaledObject
+   metadata: { name: myapp, namespace: myapp }
+   spec:
+     hosts: [myapp.halitdincer.com]
+     scaleTargetRef: { name: myapp, kind: Deployment, apiVersion: apps/v1, service: myapp, port: 80 }
+     replicas: { min: 0, max: 1 }
+     scaledownPeriod: 900          # seconds idle before scaling to 0
+     scalingMetric: { concurrency: { targetValue: 100 } }
+   ```
+
+3. **Route the Ingress through the interceptor** with an ExternalName Service
+   in the app's namespace and point the Ingress backend at it:
+
+   ```yaml
+   apiVersion: v1
+   kind: Service
+   metadata: { name: keda-interceptor, namespace: myapp }
+   spec:
+     type: ExternalName
+     externalName: keda-add-ons-http-interceptor-proxy.keda.svc.cluster.local
+     ports: [{ name: http, port: 8080 }]
+   ```
+
+Gotchas:
+
+- **Pin side-loaded images** (`k3s ctr -n k8s.io images label <img>
+  io.cri-containerd.pinned=pinned`). A scaled-to-zero app's image is "unused",
+  and kubelet image GC deletes unused images when disk passes 85%; with no
+  registry to re-pull from, the app can never wake again.
+- Apps with their own timers or background workers (scrapers, pollers) don't
+  get woken by anything — they need a KEDA cron trigger or a CronJob instead.
+- `kubectl exec deploy/<app>` fails while it is at 0. Hit the URL first.
 
 ## Adding Metrics / Alerts to a K3s App
 

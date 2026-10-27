@@ -398,6 +398,62 @@ spec:
               resources:
                 requests: { cpu: 10m, memory: 24Mi }
                 limits:   { memory: 64Mi }
+          - name: keda
+            namespace: keda
+            repoURL: https://kedacore.github.io/charts
+            chart: keda
+            targetRevision: "2.21.0"
+            values: |
+              # Scale-to-zero for apps that don't need to run constantly. KEDA
+              # itself only provides ScaledObjects; the HTTP add-on below is what
+              # wakes an app on its first request. Requests are trimmed well
+              # below the chart defaults (100Mi each) because the node runs
+              # close to its memory ceiling.
+              webhooks:
+                # Admission validation of ScaledObjects. Nice to have, not worth
+                # a third always-on pod here.
+                enabled: false
+              resources:
+                operator:
+                  requests: { cpu: 20m, memory: 64Mi }
+                  limits:   { memory: 256Mi }
+                metricServer:
+                  requests: { cpu: 20m, memory: 48Mi }
+                  limits:   { memory: 192Mi }
+          - name: keda-add-ons-http
+            namespace: keda
+            repoURL: https://kedacore.github.io/charts
+            chart: keda-add-ons-http
+            targetRevision: "0.16.0"
+            values: |
+              # HTTP scale-to-zero. An app opts in with an HTTPScaledObject plus
+              # an ExternalName Service pointing its Ingress at the interceptor
+              # (keda-add-ons-http-interceptor-proxy.keda:8080). The interceptor
+              # holds requests while a scaled-to-zero app starts, so visitors
+              # just see a slow first load. See docs/OPERATIONS.md.
+              operator:
+                resources:
+                  requests: { cpu: 10m, memory: 32Mi }
+                  limits:   { memory: 128Mi }
+              scaler:
+                replicas: 1
+                resources:
+                  requests: { cpu: 10m, memory: 32Mi }
+                  limits:   { memory: 128Mi }
+              interceptor:
+                # Single node: one interceptor is all there is to spread over.
+                replicas:
+                  min: 1
+                  max: 1
+                # Long enough for the slowest app (Django/Payload) to boot.
+                readinessTimeout: 60s
+                # Default drain is 30s; WebSocket games should get longer to
+                # finish when the interceptor itself restarts.
+                drainTimeout: 120s
+                terminationGracePeriodSeconds: 135
+                resources:
+                  requests: { cpu: 20m, memory: 32Mi }
+                  limits:   { memory: 192Mi }
   template:
     metadata:
       name: '{{.name}}'

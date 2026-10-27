@@ -30,6 +30,7 @@ spec:
     - https://grafana.github.io/helm-charts
     - https://helm.coder.com/v2
     - https://helm.releases.hashicorp.com
+    - https://kedacore.github.io/charts
     - https://prometheus-community.github.io/helm-charts
     - https://stakater.github.io/stakater-charts
     - ghcr.io/element-hq/ess-helm
@@ -65,6 +66,8 @@ spec:
       namespace: iris-mcp
     - server: https://kubernetes.default.svc
       namespace: derlem
+    - server: https://kubernetes.default.svc
+      namespace: keda
     - server: https://kubernetes.default.svc
       namespace: job-scout
     # job-scout preview AppSet creates per-PR namespaces.
