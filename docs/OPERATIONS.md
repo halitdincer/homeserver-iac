@@ -166,6 +166,9 @@ Gotchas:
 - Apps with their own timers or background workers (scrapers, pollers) don't
   get woken by anything — they need a KEDA cron trigger or a CronJob instead.
 - `kubectl exec deploy/<app>` fails while it is at 0. Hit the URL first.
+- **Probe readiness every second** (`periodSeconds: 1`). The first request
+  is held until the pod is Ready, so a 10 s probe period means a ~13 s cold
+  start; at 1 s, a Go app wakes in ~1.5 s and a Node app in ~3 s.
 
 ## Adding Metrics / Alerts to a K3s App
 
