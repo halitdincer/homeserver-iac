@@ -44,10 +44,15 @@ data:
         conditions:
           - "[STATUS] == 200"
 
+      # job-scout scales to zero when idle. A 1m check would keep it awake
+      # forever, so check twice a day, with time for a cold start; this still
+      # catches "can no longer start" (e.g. a lost image).
       - name: job-scout
         group: Public
         url: https://jobs.halitdincer.com
-        interval: 1m
+        interval: 12h
+        client:
+          timeout: 120s
         conditions:
           - "[STATUS] == 200"
 

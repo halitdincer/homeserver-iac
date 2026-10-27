@@ -17,7 +17,9 @@ spec:
           - path: /
             pathType: Prefix
             backend:
+              # Through the KEDA interceptor, which wakes job-scout from zero
+              # (see job-scout/overlays/production/scale-to-zero.yaml).
               service:
-                name: job-scout
+                name: keda-interceptor
                 port:
                   number: 8080

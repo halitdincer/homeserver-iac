@@ -5,7 +5,9 @@ metadata:
   labels:
     app: job-scout
 spec:
-  replicas: 1
+  # No `replicas:` in production: the HTTPScaledObject (overlays/production)
+  # owns it and scales to zero when idle. Previews have no HTTPScaledObject,
+  # so there it defaults to 1.
   selector:
     matchLabels:
       app: job-scout
@@ -20,7 +22,9 @@ spec:
       containers:
         - name: job-scout
           image: ghcr.io/halitdincer/job-scout:latest
-          imagePullPolicy: Always
+          # The digest is pinned by kustomize, so a cached copy is always the
+          # right one; Always would hit ghcr.io on every wake from zero.
+          imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8080
@@ -47,18 +51,22 @@ spec:
             periodSeconds: 30
             timeoutSeconds: 10
             failureThreshold: 3
+          # Probed every 2s: when scaled to zero the first request is held
+          # until this passes, so a slow probe is a slow page load.
           readinessProbe:
             httpGet:
               path: /api/v1/health
               port: 8080
-            initialDelaySeconds: 10
-            periodSeconds: 10
+            initialDelaySeconds: 5
+            periodSeconds: 2
             timeoutSeconds: 5
             failureThreshold: 3
           resources:
             requests:
               cpu: 100m
               memory: 256Mi
+            # No CPU limit (homelab convention): JVM startup is CPU-bound, and
+            # at 500m it took 80s, longer than the KEDA interceptor will hold
+            # a request while waking the app from zero.
             limits:
-              cpu: 500m
               memory: 512Mi

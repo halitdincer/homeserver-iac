@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: job-scout
 resources:
   - ../../base
+  - scale-to-zero.yaml
 images:
   - name: ghcr.io/halitdincer/job-scout
     newTag: latest

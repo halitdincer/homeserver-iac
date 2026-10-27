@@ -126,6 +126,11 @@ Ready, up to 60 s), and it goes back to 0 after `scaledownPeriod` with no
 traffic. An open WebSocket counts as an in-flight request, so a live session
 keeps the app up.
 
+Converted so far: `job-scout` (here, `overlays/production/scale-to-zero.yaml`;
+postgres stays up), plus the hand-applied `what-would-i-pick` and `rent-scout`.
+`bugsink` is not: derlem's Sentry SDKs ping it every minute with session
+updates, which would keep it permanently awake.
+
 Opt an app in with three changes in its own namespace:
 
 1. **Drop `replicas:`** from the Deployment — KEDA owns it now, and a re-apply
@@ -166,6 +171,8 @@ Gotchas:
 - Apps with their own timers or background workers (scrapers, pollers) don't
   get woken by anything — they need a KEDA cron trigger or a CronJob instead.
 - `kubectl exec deploy/<app>` fails while it is at 0. Hit the URL first.
+- **Uptime checks wake the app.** Gatus checks on a scaled-to-zero app need a
+  long interval and a client timeout that covers a cold start (see job-scout's).
 - **Probe readiness every second** (`periodSeconds: 1`). The first request
   is held until the pod is Ready, so a 10 s probe period means a ~13 s cold
   start; at 1 s, a Go app wakes in ~1.5 s and a Node app in ~3 s.

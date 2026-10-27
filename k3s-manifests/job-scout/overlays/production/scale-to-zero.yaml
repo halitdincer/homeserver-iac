@@ -1,0 +1,38 @@
+# Sleep when idle: the KEDA interceptor wakes job-scout on the first request
+# (UI visit, or the 4-hourly GitHub Actions ingest POST) and scales it back to
+# 0 after 30 quiet minutes. Ingestion runs async after the POST returns and
+# takes ~2 min, well inside that window. Postgres stays up (~45 MiB) so the app
+# never wakes without its database.
+apiVersion: http.keda.sh/v1alpha1
+kind: HTTPScaledObject
+metadata:
+  name: job-scout
+spec:
+  hosts:
+    - jobs.halitdincer.com
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: job-scout
+    service: job-scout
+    port: 8080
+  replicas:
+    min: 0
+    max: 1
+  scaledownPeriod: 1800
+  scalingMetric:
+    concurrency:
+      targetValue: 100
+---
+# The Ingress (k3s-manifests/ingresses/job-scout.yaml) can only point at a
+# Service in its own namespace, so this one forwards to the KEDA interceptor.
+apiVersion: v1
+kind: Service
+metadata:
+  name: keda-interceptor
+spec:
+  type: ExternalName
+  externalName: keda-add-ons-http-interceptor-proxy.keda.svc.cluster.local
+  ports:
+    - name: http
+      port: 8080
