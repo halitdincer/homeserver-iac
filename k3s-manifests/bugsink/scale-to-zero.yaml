@@ -1,0 +1,36 @@
+# Scale to zero: Bugsink sleeps when nothing reports an error for 30 minutes, and the next report or visit wakes it
+# (docs/OPERATIONS.md, "Scale-to-zero apps"). An error the background worker had not processed yet waits in its SQLite
+# queue for the next wake.
+apiVersion: http.keda.sh/v1alpha1
+kind: HTTPScaledObject
+metadata:
+  name: bugsink
+spec:
+  hosts:
+    - bugsink.mentorbridge.org
+  scaleTargetRef:
+    name: bugsink
+    kind: Deployment
+    apiVersion: apps/v1
+    service: bugsink
+    port: 8000
+  replicas:
+    min: 0
+    max: 1
+  scaledownPeriod: 1800
+  scalingMetric:
+    concurrency:
+      targetValue: 100
+---
+# The Ingress (k3s-manifests/ingresses/bugsink.yaml) can only point at a Service in its own namespace, so this one
+# forwards to the KEDA interceptor.
+apiVersion: v1
+kind: Service
+metadata:
+  name: keda-interceptor
+spec:
+  type: ExternalName
+  externalName: keda-add-ons-http-interceptor-proxy.keda.svc.cluster.local
+  ports:
+    - name: http
+      port: 8080

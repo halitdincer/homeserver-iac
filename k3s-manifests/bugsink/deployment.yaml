@@ -9,7 +9,7 @@ metadata:
   annotations:
     reloader.stakater.com/auto: "true"
 spec:
-  replicas: 1
+  # No replicas: KEDA scales it between 0 and 1 (scale-to-zero.yaml)
   strategy:
     # SQLite on a ReadWriteOnce volume: never two pods at once.
     type: Recreate
@@ -62,8 +62,9 @@ spec:
                   value: localhost
                 - name: X-Forwarded-Proto
                   value: https
-            initialDelaySeconds: 15
-            periodSeconds: 10
+            # every second, so a woken pod takes the request it was woken by at once
+            initialDelaySeconds: 1
+            periodSeconds: 1
           livenessProbe:
             httpGet:
               path: /health/ready

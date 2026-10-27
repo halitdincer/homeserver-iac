@@ -128,9 +128,10 @@ keeps the app up.
 
 Converted so far: `job-scout` (here, `overlays/production/scale-to-zero.yaml`;
 postgres stays up), `derlem` (`k3s-manifests/derlem/scale-to-zero.yaml`; postgres
-stays up), plus the hand-applied `what-would-i-pick` and `rent-scout`.
-`bugsink` is not: derlem's Sentry SDKs ping it every minute with session
-updates, which would keep it permanently awake.
+stays up), `bugsink` (`k3s-manifests/bugsink/scale-to-zero.yaml`), plus the
+hand-applied `what-would-i-pick` and `rent-scout`. Bugsink stays asleep only
+because derlem's Sentry SDKs send errors alone (no session updates, which they
+sent every minute before telemetry 1.0.1).
 
 Opt an app in with three changes in its own namespace:
 

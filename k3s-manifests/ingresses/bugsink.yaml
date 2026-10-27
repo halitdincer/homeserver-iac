@@ -20,6 +20,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: bugsink
+                name: keda-interceptor # wakes Bugsink when it is asleep (k3s-manifests/bugsink/scale-to-zero.yaml)
                 port:
-                  name: http
+                  number: 8080
