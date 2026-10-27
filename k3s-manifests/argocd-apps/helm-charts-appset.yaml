@@ -127,12 +127,12 @@ spec:
             targetRevision: "1.8.0"
             values: |
               # Single-node DaemonSet. Alloy plays three roles:
-              #   1. Discovers ServiceMonitors cluster-wide and remote_writes the
-              #      scraped series to Grafana Cloud Mimir.
+              #   1. Scrapes the ServiceMonitors the dashboards need and
+              #      remote_writes the series they query to Grafana Cloud Mimir.
               #   2. Scrapes the external Proxmox host node_exporter directly
               #      (replaces the kube-prometheus-stack additionalScrapeConfigs).
-              #   3. Tails container logs from every pod via the K8s API and
-              #      pushes them to Grafana Cloud Loki.
+              #   3. Tails every pod's log files on the node and pushes them to
+              #      Grafana Cloud Loki.
               # Cloud auth (basic-auth username + token) comes from the
               # grafana-cloud Secret created by the ExternalSecret in
               # k3s-manifests/apps/alloy-external-secret.yaml.
@@ -140,9 +140,20 @@ spec:
                 configMap:
                   create: true
                   content: |
-                    // === Metrics: ServiceMonitor discovery ===
+                    // Collects only what the Grafana Cloud dashboards and alerts use
+                    // (terraform/grafana.tf, terraform/grafana-dashboards/): a few
+                    // metric families every minute, and logs without the noise.
+                    logging {
+                      level = "warn"
+                    }
+
+                    // === Metrics: ServiceMonitors of the namespaces dashboards query ===
                     prometheus.operator.servicemonitors "all" {
+                      namespaces = ["argocd", "kube-state-metrics", "prometheus-node-exporter"]
                       forward_to = [prometheus.relabel.add_external.receiver]
+                      scrape {
+                        default_scrape_interval = "60s"
+                      }
                     }
 
                     // === Metrics: external Proxmox host node_exporter ===
@@ -153,30 +164,14 @@ spec:
                         job         = "node",
                       }]
                       forward_to      = [prometheus.relabel.add_external.receiver]
-                      scrape_interval = "30s"
+                      scrape_interval = "60s"
                     }
 
-                    // === Metrics: kubelet + cAdvisor on every K8s node ===
-                    // Scraped via the API-server proxy so we don't need to
-                    // know each node's IP. Series volume is pruned aggressively
-                    // (see kubelet_filter / cadvisor_filter) to stay under the
-                    // Cloud Free-tier 10k active-series cap.
+                    // === Metrics: cAdvisor (per-container CPU and memory) ===
+                    // Scraped via the API-server proxy so we don't need to know the
+                    // node's IP.
                     discovery.kubernetes "nodes" {
                       role = "node"
-                    }
-
-                    discovery.relabel "kubelet" {
-                      targets = discovery.kubernetes.nodes.targets
-                      rule {
-                        target_label = "__address__"
-                        replacement  = "kubernetes.default.svc.cluster.local:443"
-                      }
-                      rule {
-                        source_labels = ["__meta_kubernetes_node_name"]
-                        regex         = "(.+)"
-                        target_label  = "__metrics_path__"
-                        replacement   = "/api/v1/nodes/${1}/proxy/metrics"
-                      }
                     }
 
                     discovery.relabel "cadvisor" {
@@ -193,19 +188,6 @@ spec:
                       }
                     }
 
-                    prometheus.scrape "kubelet" {
-                      targets         = discovery.relabel.kubelet.output
-                      forward_to      = [prometheus.relabel.kubelet_filter.receiver]
-                      job_name        = "kubelet"
-                      scheme          = "https"
-                      bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-                      tls_config {
-                        ca_file              = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-                        insecure_skip_verify = true
-                      }
-                      scrape_interval = "30s"
-                    }
-
                     prometheus.scrape "cadvisor" {
                       targets         = discovery.relabel.cadvisor.output
                       forward_to      = [prometheus.relabel.cadvisor_filter.receiver]
@@ -216,52 +198,28 @@ spec:
                         ca_file              = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
                         insecure_skip_verify = true
                       }
-                      scrape_interval = "30s"
+                      scrape_interval = "60s"
                     }
 
-                    // Keep only the kubelet metrics queried by dashboards.
-                    prometheus.relabel "kubelet_filter" {
-                      forward_to = [prometheus.relabel.add_external.receiver]
-                      rule {
-                        source_labels = ["__name__"]
-                        regex         = "kubelet_volume_stats_(available|capacity)_bytes"
-                        action        = "keep"
-                      }
-                    }
-
-                    // Keep only the cAdvisor metrics queried by dashboards,
-                    // and drop high-cardinality labels we never group by.
+                    // Drop high-cardinality cAdvisor labels we never group by.
                     prometheus.relabel "cadvisor_filter" {
                       forward_to = [prometheus.relabel.add_external.receiver]
-                      rule {
-                        source_labels = ["__name__"]
-                        regex         = "container_(cpu_usage_seconds_total|memory_working_set_bytes)"
-                        action        = "keep"
-                      }
                       rule {
                         action = "labeldrop"
                         regex  = "id|image|name|uid|container_id"
                       }
                     }
 
-                    // Tag every series with cluster=homeserver and drop the
-                    // high-cardinality metric families we don't query. This is
-                    // the choke point for every scrape path (ServiceMonitors,
-                    // kubelet, cAdvisor, Proxmox host) before remote_write, so
-                    // one filter covers everything.
-                    //
-                    // Series-budget targets (Cloud Free tier caps at 10k):
-                    //   node_systemd_unit_state           ~1325 (Proxmox host)
-                    //   grpc_server_*                     ~1906 (argocd-server)
-                    //   workqueue_*_bucket                ~628  (controller histograms)
-                    //   controller_runtime_*_bucket       ~205
-                    // Total reclaim ~4k series.
+                    // The choke point for every scrape before remote_write: keep only
+                    // the metric families a dashboard or alert queries, and tag them
+                    // cluster=homeserver. A new panel or alert on another metric
+                    // needs it added here.
                     prometheus.relabel "add_external" {
                       forward_to = [prometheus.remote_write.cloud.receiver]
                       rule {
                         source_labels = ["__name__"]
-                        regex         = "node_systemd_.*|grpc_server_.*|workqueue_.+_bucket|controller_runtime_.+_bucket"
-                        action        = "drop"
+                        regex         = "up|node_cpu_seconds_total|node_filesystem_(avail|size)_bytes|node_memory_(MemAvailable|MemTotal)_bytes|container_(cpu_usage_seconds_total|memory_working_set_bytes)|kube_node_status_condition|kube_pod_status_phase|argocd_app_info|argocd_app_sync_total|argocd_app_reconcile_bucket|argocd_git_request_total|argocd_redis_request_total"
+                        action        = "keep"
                       }
                       rule {
                         target_label = "cluster"
@@ -279,7 +237,9 @@ spec:
                       }
                     }
 
-                    // === Logs: discover all pods, ship to Cloud Loki ===
+                    // === Logs: every pod's log files on the node, to Cloud Loki ===
+                    // Read from /var/log/pods rather than streamed from the K8s API,
+                    // which reopened every stream every few seconds.
                     discovery.kubernetes "pods" {
                       role = "pod"
                     }
@@ -311,11 +271,38 @@ spec:
                         target_label = "cluster"
                         replacement  = "homeserver"
                       }
+                      rule {
+                        source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
+                        separator     = "/"
+                        target_label  = "__path__"
+                        replacement   = "/var/log/pods/*$1/*.log"
+                      }
                     }
 
-                    loki.source.kubernetes "pods" {
-                      targets    = discovery.relabel.pod_logs.output
+                    local.file_match "pods" {
+                      path_targets = discovery.relabel.pod_logs.output
+                    }
+
+                    loki.source.file "pods" {
+                      targets       = local.file_match.pods.targets
+                      forward_to    = [loki.process.pods.receiver]
+                      tail_from_end = true
+                    }
+
+                    loki.process "pods" {
                       forward_to = [loki.write.cloud.receiver]
+                      stage.cri {}
+                      // ArgoCD logs every reconcile at info: keep its warnings and errors.
+                      stage.match {
+                        selector = "{namespace=\"argocd\"}"
+                        stage.drop {
+                          expression = "level=(info|debug)"
+                        }
+                      }
+                      // Probe and scrape requests, logged by some apps on every hit.
+                      stage.drop {
+                        expression = "(GET|HEAD) /(health|healthz|ready|readyz|livez|metrics)[ ?\"]"
+                      }
                     }
 
                     loki.write "cloud" {
@@ -327,6 +314,9 @@ spec:
                         }
                       }
                     }
+                # Pod log files (/var/log/pods), read by loki.source.file.
+                mounts:
+                  varlog: true
                 # Inject Cloud Mimir / Loki URLs + creds from the grafana-cloud Secret.
                 envFrom:
                   - secretRef:
