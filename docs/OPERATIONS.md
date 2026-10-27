@@ -127,7 +127,8 @@ traffic. An open WebSocket counts as an in-flight request, so a live session
 keeps the app up.
 
 Converted so far: `job-scout` (here, `overlays/production/scale-to-zero.yaml`;
-postgres stays up), plus the hand-applied `what-would-i-pick` and `rent-scout`.
+postgres stays up), `derlem` (`k3s-manifests/derlem/scale-to-zero.yaml`; postgres
+stays up), plus the hand-applied `what-would-i-pick` and `rent-scout`.
 `bugsink` is not: derlem's Sentry SDKs ping it every minute with session
 updates, which would keep it permanently awake.
 
@@ -173,6 +174,14 @@ Gotchas:
 - `kubectl exec deploy/<app>` fails while it is at 0. Hit the URL first.
 - **Uptime checks wake the app.** Gatus checks on a scaled-to-zero app need a
   long interval and a client timeout that covers a cold start (see job-scout's).
+- **Apps made of several services** (derlem) must wake as a set: their calls to
+  each other stay inside the cluster and never pass the interceptor. Give each
+  entry point an `HTTPScaledObject` (`pathPrefixes` per Ingress path) with the
+  annotation `httpscaledobject.keda.sh/skip-scaledobject-creation: "true"`,
+  then one `ScaledObject` per Deployment whose triggers are an `external-push`
+  (`scalerAddress: keda-add-ons-http-external-scaler.keda:9090`) for every one
+  of them. A service that calls others needs an init container waiting for
+  them, or its first request fails.
 - **Probe readiness every second** (`periodSeconds: 1`). The first request
   is held until the pod is Ready, so a 10 s probe period means a ~13 s cold
   start; at 1 s, a Go app wakes in ~1.5 s and a Node app in ~3 s.

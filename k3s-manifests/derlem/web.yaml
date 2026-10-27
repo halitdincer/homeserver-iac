@@ -7,7 +7,7 @@ metadata:
   labels:
     app: web
 spec:
-  replicas: 1
+  # No replicas: KEDA scales it between 0 and 1 (scale-to-zero.yaml)
   revisionHistoryLimit: 3
   selector:
     matchLabels:
@@ -28,11 +28,11 @@ spec:
               containerPort: 8080
           startupProbe:
             httpGet: { path: /health, port: http }
-            periodSeconds: 2
-            failureThreshold: 30
+            periodSeconds: 1
+            failureThreshold: 60
           readinessProbe:
             httpGet: { path: /health, port: http }
-            periodSeconds: 10
+            periodSeconds: 1
             timeoutSeconds: 5
           livenessProbe:
             httpGet: { path: /health, port: http }

@@ -1,6 +1,8 @@
 # derlem - the library platform: the web app, its API at /api and the MCP server at /mcp, replacing rahle
 # Domain: mentorbridge.org (temporary), behind the Cloudflare Access application "derlem"; the tunnel routes the
 # hostname to nginx (a public hostname on the remotely managed tunnel, as it is not under *.halitdincer.com)
+# Every path goes to the KEDA interceptor, which wakes derlem if it is asleep and routes /mcp, /api and the rest to
+# mcp, backend and web (k3s-manifests/derlem/scale-to-zero.yaml)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -16,24 +18,10 @@ spec:
     - host: mentorbridge.org
       http:
         paths:
-          - path: /mcp
-            pathType: Prefix
-            backend:
-              service:
-                name: mcp
-                port:
-                  number: 8400
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: backend
-                port:
-                  number: 8300
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: web
+                name: keda-interceptor
                 port:
                   number: 8080

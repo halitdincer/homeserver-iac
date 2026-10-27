@@ -6,7 +6,7 @@ metadata:
   labels:
     app: backend
 spec:
-  replicas: 1
+  # No replicas: KEDA scales it between 0 and 1 (scale-to-zero.yaml)
   revisionHistoryLimit: 3
   selector:
     matchLabels:
@@ -19,6 +19,28 @@ spec:
       imagePullSecrets:
         - name: ghcr-pull # the derlem repo and its packages are private
       terminationGracePeriodSeconds: 30
+      # Everything wakes at once, so wait for the services this one calls: a request answered before they are up fails
+      initContainers:
+        - name: wait-for-services
+          image: ghcr.io/halitdincer/derlem-backend
+          command:
+            - python
+            - -c
+            - |
+              import time, urllib.request
+              for host in ("users:8100", "corpus:8200", "media:8500"):
+                  while True:
+                      try:
+                          urllib.request.urlopen(f"http://{host}/health", timeout=1)
+                          break
+                      except Exception:
+                          time.sleep(0.25)
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
       containers:
         - name: backend
           image: ghcr.io/halitdincer/derlem-backend
@@ -46,11 +68,11 @@ spec:
               valueFrom: { secretKeyRef: { name: derlem-secret, key: ACCESS_AUD } }
           startupProbe:
             httpGet: { path: /health, port: http }
-            periodSeconds: 2
-            failureThreshold: 60
+            periodSeconds: 1
+            failureThreshold: 120
           readinessProbe:
             httpGet: { path: /ready, port: http }
-            periodSeconds: 10
+            periodSeconds: 1
             timeoutSeconds: 5
           livenessProbe:
             httpGet: { path: /health, port: http }

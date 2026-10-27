@@ -1,0 +1,236 @@
+# Scale to zero: derlem sleeps with no pods but the database when nobody uses it, and wakes on the next request
+# (docs/OPERATIONS.md, "Scale-to-zero apps"). The ingress sends mentorbridge.org to the KEDA interceptor, which holds
+# each request until its service is up.
+#
+# derlem is six services calling each other inside the cluster, where the interceptor never sees the traffic, so they
+# wake and sleep together: each HTTPScaledObject below only routes one path of the ingress, and every service's
+# ScaledObject is triggered by all three. Visiting any page wakes everything; backend and mcp wait for the services they
+# call before taking requests. A connected MCP session keeps it awake.
+---
+apiVersion: http.keda.sh/v1alpha1
+kind: HTTPScaledObject
+metadata:
+  name: web
+  annotations:
+    httpscaledobject.keda.sh/skip-scaledobject-creation: "true" # scaled by the ScaledObjects below
+spec:
+  hosts:
+    - mentorbridge.org
+  pathPrefixes:
+    - /
+  scaleTargetRef:
+    name: web
+    kind: Deployment
+    apiVersion: apps/v1
+    service: web
+    port: 8080
+  replicas:
+    min: 0
+    max: 1
+  scalingMetric:
+    concurrency:
+      targetValue: 100
+---
+apiVersion: http.keda.sh/v1alpha1
+kind: HTTPScaledObject
+metadata:
+  name: backend
+  annotations:
+    httpscaledobject.keda.sh/skip-scaledobject-creation: "true" # scaled by the ScaledObjects below
+spec:
+  hosts:
+    - mentorbridge.org
+  pathPrefixes:
+    - /api
+  scaleTargetRef:
+    name: backend
+    kind: Deployment
+    apiVersion: apps/v1
+    service: backend
+    port: 8300
+  replicas:
+    min: 0
+    max: 1
+  scalingMetric:
+    concurrency:
+      targetValue: 100
+---
+apiVersion: http.keda.sh/v1alpha1
+kind: HTTPScaledObject
+metadata:
+  name: mcp
+  annotations:
+    httpscaledobject.keda.sh/skip-scaledobject-creation: "true" # scaled by the ScaledObjects below
+spec:
+  hosts:
+    - mentorbridge.org
+  pathPrefixes:
+    - /mcp
+  scaleTargetRef:
+    name: mcp
+    kind: Deployment
+    apiVersion: apps/v1
+    service: mcp
+    port: 8400
+  replicas:
+    min: 0
+    max: 1
+  scalingMetric:
+    concurrency:
+      targetValue: 100
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: web
+spec:
+  scaleTargetRef:
+    name: web
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  cooldownPeriod: 1800 # asleep after 30 minutes without a request
+  triggers:
+    - type: external-push
+      metadata:
+        httpScaledObject: web
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+    - type: external-push
+      metadata:
+        httpScaledObject: backend
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+    - type: external-push
+      metadata:
+        httpScaledObject: mcp
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: backend
+spec:
+  scaleTargetRef:
+    name: backend
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  cooldownPeriod: 1800 # asleep after 30 minutes without a request
+  triggers:
+    - type: external-push
+      metadata:
+        httpScaledObject: web
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+    - type: external-push
+      metadata:
+        httpScaledObject: backend
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+    - type: external-push
+      metadata:
+        httpScaledObject: mcp
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: mcp
+spec:
+  scaleTargetRef:
+    name: mcp
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  cooldownPeriod: 1800 # asleep after 30 minutes without a request
+  triggers:
+    - type: external-push
+      metadata:
+        httpScaledObject: web
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+    - type: external-push
+      metadata:
+        httpScaledObject: backend
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+    - type: external-push
+      metadata:
+        httpScaledObject: mcp
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: users
+spec:
+  scaleTargetRef:
+    name: users
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  cooldownPeriod: 1800 # asleep after 30 minutes without a request
+  triggers:
+    - type: external-push
+      metadata:
+        httpScaledObject: web
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+    - type: external-push
+      metadata:
+        httpScaledObject: backend
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+    - type: external-push
+      metadata:
+        httpScaledObject: mcp
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: corpus
+spec:
+  scaleTargetRef:
+    name: corpus
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  cooldownPeriod: 1800 # asleep after 30 minutes without a request
+  triggers:
+    - type: external-push
+      metadata:
+        httpScaledObject: web
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+    - type: external-push
+      metadata:
+        httpScaledObject: backend
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+    - type: external-push
+      metadata:
+        httpScaledObject: mcp
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: media
+spec:
+  scaleTargetRef:
+    name: media
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  cooldownPeriod: 1800 # asleep after 30 minutes without a request
+  triggers:
+    - type: external-push
+      metadata:
+        httpScaledObject: web
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+    - type: external-push
+      metadata:
+        httpScaledObject: backend
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+    - type: external-push
+      metadata:
+        httpScaledObject: mcp
+        scalerAddress: keda-add-ons-http-external-scaler.keda:9090
+---
+# The ingress's backend: an alias for the interceptor, which lives in the keda namespace
+apiVersion: v1
+kind: Service
+metadata:
+  name: keda-interceptor
+spec:
+  type: ExternalName
+  externalName: keda-add-ons-http-interceptor-proxy.keda.svc.cluster.local
+  ports:
+    - name: http
+      port: 8080

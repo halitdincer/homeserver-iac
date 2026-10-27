@@ -6,7 +6,7 @@ metadata:
   labels:
     app: corpus
 spec:
-  replicas: 1
+  # No replicas: KEDA scales it between 0 and 1 (scale-to-zero.yaml)
   revisionHistoryLimit: 3
   strategy:
     # the node's memory requests are nearly all given out: a second corpus pod (384Mi) would not fit beside the
@@ -48,11 +48,11 @@ spec:
               readOnly: true
           startupProbe:
             httpGet: { path: /health, port: http }
-            periodSeconds: 2
-            failureThreshold: 60
+            periodSeconds: 1
+            failureThreshold: 120
           readinessProbe:
             httpGet: { path: /health, port: http }
-            periodSeconds: 10
+            periodSeconds: 1
             timeoutSeconds: 5
           livenessProbe:
             httpGet: { path: /health, port: http }

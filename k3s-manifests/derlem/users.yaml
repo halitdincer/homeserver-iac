@@ -6,7 +6,7 @@ metadata:
   labels:
     app: users
 spec:
-  replicas: 1
+  # No replicas: KEDA scales it between 0 and 1 (scale-to-zero.yaml)
   revisionHistoryLimit: 3
   selector:
     matchLabels:
@@ -40,11 +40,11 @@ spec:
               valueFrom: { secretKeyRef: { name: derlem-secret, key: ACCESS_AUD } }
           startupProbe:
             httpGet: { path: /health, port: http }
-            periodSeconds: 2
-            failureThreshold: 60
+            periodSeconds: 1
+            failureThreshold: 120
           readinessProbe:
             httpGet: { path: /ready, port: http }
-            periodSeconds: 10
+            periodSeconds: 1
             timeoutSeconds: 5
           livenessProbe:
             httpGet: { path: /health, port: http }

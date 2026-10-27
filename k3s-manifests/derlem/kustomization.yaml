@@ -10,6 +10,7 @@ resources:
   - backend.yaml
   - mcp.yaml
   - web.yaml
+  - scale-to-zero.yaml
 # The version of each image running: released versions only, pinned by the derlem repo's deploy workflow (`just deploy`
 # there), which commits here; ArgoCD rolls them out
 images:
