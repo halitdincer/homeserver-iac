@@ -327,13 +327,13 @@ spec:
                 # latter, which left Alloy unlimited from PR #14 through #16.
                 resources:
                   requests:
-                    cpu: 100m
-                    memory: 384Mi
+                    cpu: 50m
+                    memory: 160Mi
                   limits:
                     # No CPU limit (homelab convention).
-                    # 768Mi gives ~60% headroom over observed 472Mi steady-
-                    # state (kubelet + cAdvisor scrape paths from PR #14).
-                    memory: 768Mi
+                    # ~120Mi observed since collecting only what dashboards
+                    # use (was ~470Mi); 384Mi leaves room for a log burst.
+                    memory: 384Mi
               controller:
                 type: daemonset
                 # Alloy needs cluster-wide read on ServiceMonitor / PodMonitor /
