@@ -6,6 +6,9 @@ metadata:
     app: iris-mcp
 spec:
   replicas: 1
+  # The OAuth state volume is ReadWriteOnce.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: iris-mcp
@@ -14,6 +17,8 @@ spec:
       labels:
         app: iris-mcp
     spec:
+      securityContext:
+        fsGroup: 1000
       containers:
         - name: iris-mcp
           image: ghcr.io/halitdincer/iris-mcp:latest
@@ -38,6 +43,35 @@ spec:
                 secretKeyRef:
                   name: iris-mcp-secret
                   key: MCP_UPSTREAM_TOKEN
+            # OAuth (GitHub) for Claude.ai / ChatGPT connectors. Off until the
+            # GitHub OAuth App credentials exist in Vault; see iris docs/MCP.md.
+            - name: IRIS_MCP_PUBLIC_BASE_URL
+              value: https://iris-mcp.halitdincer.com
+            - name: IRIS_MCP_ALLOWED_GITHUB_LOGINS
+              value: '["halitdincer"]'
+            - name: FASTMCP_HOME
+              value: /data/fastmcp
+            - name: IRIS_MCP_GITHUB_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: iris-mcp-oauth
+                  key: MCP_GITHUB_CLIENT_ID
+                  optional: true
+            - name: IRIS_MCP_GITHUB_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: iris-mcp-oauth
+                  key: MCP_GITHUB_CLIENT_SECRET
+                  optional: true
+            - name: IRIS_MCP_OAUTH_JWT_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: iris-mcp-oauth
+                  key: MCP_OAUTH_JWT_SIGNING_KEY
+                  optional: true
+          volumeMounts:
+            - name: data
+              mountPath: /data
           livenessProbe:
             httpGet:
               path: /healthz
@@ -61,3 +95,7 @@ spec:
             limits:
               cpu: 250m
               memory: 128Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: iris-mcp-data

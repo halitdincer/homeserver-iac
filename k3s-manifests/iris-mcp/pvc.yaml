@@ -1,0 +1,13 @@
+# FastMCP's OAuth proxy state (client registrations, token mappings), so
+# connected MCP clients survive a pod restart without re-authorising.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: iris-mcp-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 64Mi
