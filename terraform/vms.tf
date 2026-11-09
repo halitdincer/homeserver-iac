@@ -25,7 +25,7 @@ resource "proxmox_virtual_environment_vm" "immich" {
     dedicated = 4096 # 4GB ceiling (live usage ~3.5GB). 12GB was incoherent on a
     # 15GB host: immich+k3s+haos alone already sum to 20GB. Reverted 2026-08-02.
     # balloon down to 1GB under host pressure (was 2GB): the running VMs' ceilings sum to the host's 16GB, and k3s
-    # (derlem's 7.6GB corpus index wants page cache) is the one that should keep its memory
+    # is the one that should keep its memory
     floating = 1024
   }
 

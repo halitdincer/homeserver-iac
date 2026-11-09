@@ -16,7 +16,6 @@
 | `bugsink` | `k3s-manifests/bugsink/` | Bugsink error tracking at `bugsink.mentorbridge.org` (kustomize). `bugsink/bugsink`, web + background worker in one container, SQLite on a PVC. Sentry-SDK compatible: apps send errors to a project's DSN. Ingress is public (browsers report there); the UI has its own login, registration off. Secret from Vault `secret/bugsink/config`. |
 | `job-scout` | `k3s-manifests/job-scout/` | job-scout (kustomize) |
 | `iris` | `k3s-manifests/iris/` | Personal capability API at `iris.halitdincer.com` (kustomize). FastAPI + OpenAPI surface for LLMs. Three-tier auth (public / JWT / step-up via ntfy). |
-| `derlem` | `k3s-manifests/derlem/` | derlem, the library platform that replaced rahle, at `mentorbridge.org` for now (kustomize): `users`, `corpus`, `media`, `web` (the web app, Caddy), `backend` (`/api`) and `mcp` (`/mcp`), one `ghcr.io/halitdincer/derlem-*` image each, plus a Postgres StatefulSet (databases `users` and `app`; the services migrate them on start). Behind the Cloudflare Access application `derlem`. Each image is pinned to a released version in `kustomization.yaml`; a deploy is the derlem repo's `deploy` workflow (`just deploy` there, GitHub environment `production`, with a read-write deploy key on this repo) committing new versions; a rollback is a deploy of an earlier one. The corpus is not in an image: see "derlem corpus data" below. |
 | `vault` | Helm: hashicorp/vault@0.29.1 | Vault (standalone Raft) |
 | `external-secrets` | Helm: external-secrets@0.14.0 | ESO |
 | `keda`, `keda-add-ons-http` | Helm: kedacore/keda@2.21.0, kedacore/keda-add-ons-http@0.16.0 (namespace `keda`) | Scale-to-zero for occasionally-used apps. See "Scale-to-zero apps" below. |
@@ -127,11 +126,9 @@ traffic. An open WebSocket counts as an in-flight request, so a live session
 keeps the app up.
 
 Converted so far: `job-scout` (here, `overlays/production/scale-to-zero.yaml`;
-postgres stays up), `derlem` (`k3s-manifests/derlem/scale-to-zero.yaml`; postgres
-stays up), `bugsink` (`k3s-manifests/bugsink/scale-to-zero.yaml`), plus the
+postgres stays up), `bugsink` (`k3s-manifests/bugsink/scale-to-zero.yaml`), plus the
 hand-applied `what-would-i-pick` and `rent-scout`. Bugsink stays asleep only
-because derlem's Sentry SDKs send errors alone (no session updates, which they
-sent every minute before telemetry 1.0.1).
+because derlem's web app sends errors alone (no session updates).
 
 Opt an app in with three changes in its own namespace:
 
@@ -175,7 +172,7 @@ Gotchas:
 - `kubectl exec deploy/<app>` fails while it is at 0. Hit the URL first.
 - **Uptime checks wake the app.** Gatus checks on a scaled-to-zero app need a
   long interval and a client timeout that covers a cold start (see job-scout's).
-- **Apps made of several services** (derlem) must wake as a set: their calls to
+- **Apps made of several services** must wake as a set: their calls to
   each other stay inside the cluster and never pass the interceptor. Give each
   entry point an `HTTPScaledObject` (`pathPrefixes` per Ingress path) with the
   annotation `httpscaledobject.keda.sh/skip-scaledobject-creation: "true"`,
@@ -232,16 +229,3 @@ External (non-K8s) targets like the Proxmox host live in the `prometheus.scrape`
 block of `alloy`'s River config (`k3s-manifests/argocd-apps/helm-charts-appset.yaml`,
 the `alloy` entry).
 
-## derlem corpus data
-
-`corpus` and `media` read the Release Index files and the Media Store from the K3s node itself (hostPath, read-only):
-`/srv/derlem/releases/<name>.sqlite` and `/srv/derlem/media/`. They are built in the derlem repo (`releases/`, `media/`
-there) and copied over by hand, readable by `nobody`, then the pods restarted:
-
-```bash
-rsync -a --chmod=a+rX releases/ root@100.112.34.54:/srv/derlem/releases/
-rsync -a --chmod=a+rX media/ root@100.112.34.54:/srv/derlem/media/
-ssh root@100.112.34.54 kubectl rollout restart -n derlem deploy/corpus deploy/media
-```
-
-A pod stays in ContainerCreating until its directory exists.
