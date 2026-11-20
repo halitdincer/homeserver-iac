@@ -1,0 +1,50 @@
+# data: SQLite DB, search index, classifier model
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: paperless-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi
+---
+# media: original + archived (OCR'd PDF/A) documents
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: paperless-media
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi
+---
+# consume: drop-folder inbox; export: document_exporter target for backups
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: paperless-consume
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: paperless-export
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi

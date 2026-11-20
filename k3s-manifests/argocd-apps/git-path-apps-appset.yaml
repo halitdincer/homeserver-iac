@@ -49,6 +49,9 @@ spec:
           - name: personal-site
             path: k3s-manifests/personal-site
             namespace: personal-site
+          - name: paperless
+            path: k3s-manifests/paperless
+            namespace: paperless
   template:
     metadata:
       name: '{{.name}}'

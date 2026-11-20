@@ -8,6 +8,7 @@
 | Immich DB | `pg_dump` via Ansible | USB drive (`/mnt/usb-backup/immich-db`) | Weekly (manual) |
 | Immich photos | rsync via Ansible | USB drive (`/mnt/usb-backup/immich-photos`) | Weekly (manual) |
 | Home Assistant | HAOS built-in backup | HAOS internal | Daily (auto) |
+| Paperless | Covered by the K3s VM vzdump only (PVCs live on VM 105). TODO: scheduled `document_exporter` to `paperless-export` + encrypted offsite copy | USB drive (via vzdump) | Weekly |
 
 ## USB drive layout
 
