@@ -72,6 +72,15 @@ resource "cloudflare_dns_record" "vault" {
   proxied = false
 }
 
+resource "cloudflare_dns_record" "paperless" {
+  zone_id = data.cloudflare_zone.halitdincer.zone_id
+  name    = "paperless"
+  type    = "A"
+  content = "100.112.34.54"
+  ttl     = 1800
+  proxied = false
+}
+
 resource "cloudflare_dns_record" "proxmox" {
   zone_id = data.cloudflare_zone.halitdincer.zone_id
   name    = "proxmox"
