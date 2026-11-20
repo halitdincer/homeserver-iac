@@ -1,0 +1,24 @@
+# paperless - Paperless-ngx (personal document archive)
+# Domain: paperless.halitdincer.com — Tailscale-only (A -> 100.112.34.54, unproxied, terraform/dns.tf)
+# Never route this through the Cloudflare Tunnel: it holds ID, banking and housing documents.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: paperless
+  namespace: paperless
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "200m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: paperless.halitdincer.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: paperless
+                port:
+                  number: 8000
