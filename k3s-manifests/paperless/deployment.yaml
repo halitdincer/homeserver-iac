@@ -31,6 +31,9 @@ spec:
           env:
             - name: PAPERLESS_URL
               value: https://paperless.halitdincer.com
+            # TLS terminates at nginx-ingress
+            - name: PAPERLESS_PROXY_SSL_HEADER
+              value: '["HTTP_X_FORWARDED_PROTO", "https"]'
             - name: PAPERLESS_REDIS
               value: redis://localhost:6379
             - name: PAPERLESS_DBENGINE
@@ -65,17 +68,29 @@ spec:
             httpGet:
               path: /
               port: http
+              # PAPERLESS_URL pins ALLOWED_HOSTS; probes by pod IP get a 400
+              httpHeaders:
+                - name: Host
+                  value: paperless.halitdincer.com
             periodSeconds: 10
             failureThreshold: 60
           readinessProbe:
             httpGet:
               path: /
               port: http
+              # PAPERLESS_URL pins ALLOWED_HOSTS; probes by pod IP get a 400
+              httpHeaders:
+                - name: Host
+                  value: paperless.halitdincer.com
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /
               port: http
+              # PAPERLESS_URL pins ALLOWED_HOSTS; probes by pod IP get a 400
+              httpHeaders:
+                - name: Host
+                  value: paperless.halitdincer.com
             periodSeconds: 30
             timeoutSeconds: 5
           resources:
