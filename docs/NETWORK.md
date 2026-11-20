@@ -38,6 +38,7 @@ K3s Tailscale IP: `100.112.34.54`
 | argocd | A -> 100.112.34.54 | No | Tailscale only |
 | vault | A -> 100.112.34.54 | No | Tailscale only |
 | proxmox | A -> 100.112.34.54 | No | Tailscale only |
+| paperless | A -> 100.112.34.54 | No | Tailscale only (personal documents; must never be on the tunnel) |
 
 Grafana / Prometheus / Loki are no longer hosted in-cluster — observability
 moved to Grafana Cloud. Cloud Grafana is reached at the stack URL on
