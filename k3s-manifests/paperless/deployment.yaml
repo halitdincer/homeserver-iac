@@ -16,6 +16,9 @@ spec:
       labels:
         app: paperless
     spec:
+      # The Service is named "paperless", so service links would inject
+      # PAPERLESS_PORT=tcp://... and break Paperless's own PAPERLESS_PORT setting.
+      enableServiceLinks: false
       containers:
         - name: paperless
           image: ghcr.io/paperless-ngx/paperless-ngx:3.5.1
