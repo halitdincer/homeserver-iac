@@ -58,7 +58,15 @@ jobs:
           FAIL=0
           for d in ${{ steps.changed.outputs.dirs }}; do
             echo "::group::$d"
-            helm dependency build "$d" 2>/dev/null || true
+            # `helm dependency build` needs every https dependency repo registered
+            # (charts/ is gitignored, so CI always has to fetch them).
+            for url in $(awk '/^[[:space:]]*repository:/ {gsub(/"/, "", $2); print $2}' "$d/Chart.yaml"); do
+              [[ "$url" == https://* ]] && helm repo add "dep-$(echo -n "$url" | md5sum | cut -c1-8)" "$url" --force-update >/dev/null
+            done
+            if ! helm dependency build "$d"; then
+              echo "::error::helm dependency build failed for $d"
+              FAIL=1
+            fi
             helm lint "$d" || FAIL=1
             if ! helm template "$d" "${ARGS[@]}" > /dev/null; then
               echo "::error::template render failed for $d"
