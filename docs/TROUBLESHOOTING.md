@@ -129,3 +129,13 @@ dhclient wlp3s0
 ssh root@192.168.4.1
 /usr/local/sbin/restore-normal-network.sh
 ```
+
+## 11. Wildcard certificate not renewing (Tailscale-only hosts show expired cert)
+
+Symptom: `kubectl -n ingress-nginx get certificate wildcard-halitdincer` is `READY=False`; cert-manager logs `Could not route to /client/v4/zones/dns_records/<id>` (note the empty zone ID in `/zones//dns_records`). Public hosts look fine because Cloudflare serves its own edge cert; only Tailscale-only hosts (argocd, vault, proxmox, paperless) show the expired cert.
+
+Cause (2026-07 → 2026-11): Cloudflare removed `zone_id` from DNS record API responses; cert-manager < v1.16 used it to delete the TXT record, so challenge cleanup failed forever and the order never completed.
+
+Fix: cert-manager >= v1.16.5 (upgraded 2026-11-20 via the official static manifest; cert-manager is not ArgoCD-managed yet). If an order is still stuck after upgrading, delete the stuck CertificateRequest (`kubectl -n ingress-nginx delete certificaterequest wildcard-halitdincer-<n>`) and cert-manager starts a fresh one.
+
+Per-host HTTP-01 certs (`spec.tls` + `letsencrypt-prod`) can never renew on a Tailscale-only host: don't add `spec.tls` to those Ingresses, the wildcard is the nginx default cert.

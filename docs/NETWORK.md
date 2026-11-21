@@ -64,6 +64,7 @@ Single wildcard cert `*.halitdincer.com` (+ apex) covers every public subdomain.
 | Cloudflare API token | Vault `secret/cert-manager/config` -> ESO -> Secret `cloudflare-api-token` in `cert-manager` ns. Scope: `Zone:DNS:Edit` + `Zone:Zone:Read` on `halitdincer.com` only |
 | Default cert | nginx-ingress controller arg `--default-ssl-certificate=ingress-nginx/wildcard-halitdincer-tls` makes the wildcard the fallback for every host |
 | Renewal | Auto, 15 days before expiry (90-day cert) |
+| cert-manager | v1.16.5, installed from the upstream static manifest (not ArgoCD-managed). Must stay >= v1.16.5 for the Cloudflare `zone_id` fix (see TROUBLESHOOTING.md #11) |
 
 Adding a new subdomain: just create the Ingress with `host: foo.halitdincer.com`. No `cert-manager.io/cluster-issuer` annotation, no `spec.tls` block — wildcard is inherited automatically.
 
